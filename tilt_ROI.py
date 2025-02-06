@@ -7,7 +7,7 @@ import torch
 # Initialize YOLO model
 model = YOLO('C:/Users/khale/LIA/train/best.pt')  # or use your custom trained model path
 video_path = 'C:/Users/khale/LIA/data/3.mp4'
-output_path = 'videos_output/output10.mp4'
+output_path = 'videos_output/output_ori_1.mp4'
 # Initialize DeepSORT tracker
 # Initialize DeepSORT tracker
 tracker = DeepSort(
@@ -63,6 +63,14 @@ def process_frame(frame, model, tracker):
     """
     Process each frame for object detection and orientation tracking
     """
+    # Get frame dimensions
+    frame_height, frame_width = frame.shape[:2]
+    
+    # Define the region of interest (middle of the frame)
+    roi_x_start = int(frame_width * 0.4)  # Start at 40% of frame width
+    roi_x_end = int(frame_width * 0.6)    # End at 60% of frame width
+    roi_width = roi_x_end - roi_x_start
+    
     results = model(frame, conf=0.5)[0]
     
     detections = []
@@ -77,6 +85,9 @@ def process_frame(frame, model, tracker):
         width = x2 - x1
         height = y2 - y1
         
+        # Calculate center point of the detection
+        center_x = (x1 + x2) // 2
+        
         if confidence > 0.5 and width > 20 and height > 20:
             bbox = [x1, y1, width, height]
             detections.append((bbox, confidence, class_id))
@@ -86,19 +97,32 @@ def process_frame(frame, model, tracker):
                 [x2, y2], [x1, y2]
             ], dtype=np.float32)
             
-            # Get orientation information
-            orientation, angle, aspect_ratio = get_plank_orientation(points, width, height)
+            # Only perform orientation detection if object is in ROI
+            if roi_x_start <= center_x <= roi_x_end:
+                orientation, angle, aspect_ratio = get_plank_orientation(points, width, height)
+            else:
+                orientation = "unknown"
+                angle = 0
+                aspect_ratio = width / height if height != 0 else 0
+                
             orientations.append((points, angle, orientation, aspect_ratio))
     
     tracked_objects = tracker.update_tracks(detections, frame=frame)
     tracked_objects = [t for t in tracked_objects if t.is_confirmed() and t.time_since_update <= 1]
     
-    return tracked_objects, orientations
+    return tracked_objects, orientations, (roi_x_start, roi_x_end)
 
-def draw_boxes_and_orientations(frame, tracked_objects, orientations):
+def draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds):
     """
     Draw bounding boxes, track IDs, and orientations on the frame
     """
+    roi_x_start, roi_x_end = roi_bounds
+    frame_height = frame.shape[0]
+    
+    # Draw ROI region
+    cv2.line(frame, (roi_x_start, 0), (roi_x_start, frame_height), (255, 255, 0), 2)
+    cv2.line(frame, (roi_x_end, 0), (roi_x_end, frame_height), (255, 255, 0), 2)
+    
     used_positions = {}
     
     for track, (points, angle, orientation, aspect_ratio) in zip(tracked_objects, orientations):
@@ -111,8 +135,17 @@ def draw_boxes_and_orientations(frame, tracked_objects, orientations):
         width = x2 - x1
         height = y2 - y1
         
-        # Set color based on orientation
-        color = (0, 255, 0) if orientation == "correct" else (0, 0, 255)
+        # Calculate center point
+        center_x = (x1 + x2) // 2
+        
+        # Set color based on orientation and position
+        if roi_x_start <= center_x <= roi_x_end:
+            if orientation == "correct":
+                color = (0, 255, 0)  # Green for correct orientation in ROI
+            else:
+                color = (0, 0, 255)  # Red for incorrect orientation in ROI
+        else:
+            color = (128, 128, 128)  # Gray for objects outside ROI
         
         # Draw rotated bounding box
         rect = cv2.minAreaRect(points)
@@ -126,26 +159,30 @@ def draw_boxes_and_orientations(frame, tracked_objects, orientations):
             label_y -= 20
         used_positions[(x1, label_y)] = True
         
-        # Draw information with orientation status
-        label = f"ID: {track_id} | {orientation} | AR: {aspect_ratio:.2f}"
+        # Draw information
+        if roi_x_start <= center_x <= roi_x_end:
+            label = f"ID: {track_id} | {orientation} | AR: {aspect_ratio:.2f}"
+        else:
+            label = f"ID: {track_id} | outside ROI"
+            
         (text_width, text_height), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
         cv2.rectangle(frame, (x1, label_y - text_height - 4), 
                      (x1 + text_width, label_y + 4), (0, 0, 0), -1)
         cv2.putText(frame, label, (x1, label_y), 
                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
         
-        # Draw center point and orientation line
-        center_x = int((x1 + x2) / 2)
-        center_y = int((y1 + y2) / 2)
-        cv2.circle(frame, (center_x, center_y), 4, color, -1)
-        
-        line_length = min(width, height) // 2
-        end_x = center_x + int(line_length * np.cos(np.radians(angle)))
-        end_y = center_y + int(line_length * np.sin(np.radians(angle)))
-        cv2.line(frame, (center_x, center_y), (end_x, end_y), color, 2)
+        # Draw center point and orientation line only in ROI
+        if roi_x_start <= center_x <= roi_x_end:
+            center_x = int((x1 + x2) / 2)
+            center_y = int((y1 + y2) / 2)
+            cv2.circle(frame, (center_x, center_y), 4, color, -1)
+            
+            line_length = min(width, height) // 2
+            end_x = center_x + int(line_length * np.cos(np.radians(angle)))
+            end_y = center_y + int(line_length * np.sin(np.radians(angle)))
+            cv2.line(frame, (center_x, center_y), (end_x, end_y), color, 2)
     
     return frame
-
 def main():
     # Open video capture
     cap = cv2.VideoCapture(video_path)
