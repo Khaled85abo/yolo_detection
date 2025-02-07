@@ -229,55 +229,53 @@ def draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds
     return frame
 
 def main():
-    # Open video capture
-    cap = cv2.VideoCapture(video_path)
+    # Initialize Pi camera
+    cap = cv2.VideoCapture(0)  # Use 0 for default camera
+    
+    # Optional: Set camera properties for better performance
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)  # Reduce resolution for better performance
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+    cap.set(cv2.CAP_PROP_FPS, 30)
     
     # Get video properties for output
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
-    custom_fps = 10  # or any other value
-
+    custom_fps = 10  # Adjust based on your Pi's performance
     
     # Initialize video writer
-    # Different codec options:
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # MP4 format
-    # # or
-    # fourcc = cv2.VideoWriter_fourcc(*'avc1')  # H.264 codec
-    # # or
-    # fourcc = cv2.VideoWriter_fourcc(*'XVID')  # AVI format
-    # out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
     out = cv2.VideoWriter(output_path, fourcc, custom_fps, (width, height))
-
-    # optional: Set video writer properties
-    if hasattr(out, 'set'):
-        out.set(cv2.VIDEOWRITER_PROP_QUALITY, 100)  # Set quality (0-100)
     
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
+    try:
+        while True:  # Changed from cap.isOpened() for better reliability with Pi camera
+            ret, frame = cap.read()
+            if not ret:
+                print("Failed to grab frame")
+                break
+                
+            # Process frame with ROI information
+            tracked_objects, orientations, roi_bounds = process_frame(frame, model, tracker)
             
-        # Process frame with ROI information
-        tracked_objects, orientations, roi_bounds = process_frame(frame, model, tracker)
-        
-        # Draw results
-        frame = draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds)
-        
-        # Write frame to output video
-        out.write(frame)
-        
-        # Display frame
-        cv2.imshow('Tracking with Orientation', frame)
-        
-        # Break loop with 'q'
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-    
-    # Clean up
-    cap.release()
-    out.release()
-    cv2.destroyAllWindows()
+            # Draw results
+            frame = draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds)
+            
+            # Write frame to output video
+            out.write(frame)
+            
+            # Display frame
+            cv2.imshow('Tracking with Orientation', frame)
+            
+            # Break loop with 'q'
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+                
+    except KeyboardInterrupt:
+        print("Stopping capture...")
+    finally:
+        # Clean up
+        cap.release()
+        out.release()
+        cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     main()
