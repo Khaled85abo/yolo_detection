@@ -5,6 +5,8 @@ from deep_sort_realtime.deepsort_tracker import DeepSort
 import torch
 # Add this at the top with other imports
 from collections import defaultdict
+from picamera2 import Picamera2
+from libcamera import controls
 
 # Add this as a global variable
 orientation_memory = defaultdict(lambda: {"orientation": "unknown", "angle": 0, "aspect_ratio": 0})
@@ -229,17 +231,25 @@ def draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds
     return frame
 
 def main():
-    # Initialize Pi camera
-    cap = cv2.VideoCapture(0)  # Use 0 for default camera
+    # Initialize Pi camera with picamera2
+    picam2 = Picamera2()
     
-    # Optional: Set camera properties for better performance
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)  # Reduce resolution for better performance
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-    cap.set(cv2.CAP_PROP_FPS, 30)
+    # Configure camera
+    config = picam2.create_video_configuration(
+        main={"size": (640, 480), "format": "RGB888"},
+        controls={"FrameDurationLimits": (33333, 33333)}  # ~30fps
+    )
+    picam2.configure(config)
+    
+    # Optional: Add auto-focus and exposure controls
+    picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
+    picam2.set_controls({"AeEnable": True})
+    
+    # Start camera
+    picam2.start()
     
     # Get video properties for output
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    width, height = 640, 480  # Match with camera config
     custom_fps = 10  # Adjust based on your Pi's performance
     
     # Initialize video writer
@@ -248,11 +258,12 @@ def main():
     
     try:
         while True:
-            ret, frame = cap.read()
-            if not ret:
-                print("Failed to grab frame")
-                break
-                
+            # Capture frame from picamera2
+            frame = picam2.capture_array()
+            
+            # Convert frame from RGB to BGR for OpenCV compatibility
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            
             # Process frame with ROI information
             tracked_objects, orientations, roi_bounds = process_frame(frame, model, tracker)
             
@@ -273,7 +284,7 @@ def main():
         print("Stopping capture...")
     finally:
         # Clean up
-        cap.release()
+        picam2.stop()
         out.release()
         cv2.destroyAllWindows()
 
