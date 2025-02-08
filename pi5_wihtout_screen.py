@@ -7,12 +7,6 @@ import torch
 from collections import defaultdict
 from picamera2 import Picamera2
 from libcamera import controls
-# Add these new imports
-from PIL import Image, ImageDraw, ImageFont
-import board
-import digitalio
-import adafruit_rgb_display.st7789 as st7789
-import time
 
 # Add this as a global variable
 orientation_memory = defaultdict(lambda: {"orientation": "unknown", "angle": 0, "aspect_ratio": 0})
@@ -23,105 +17,18 @@ video_path = 'C:/Users/khale/LIA/data/3.mp4'
 output_path = 'videos_output/yolo11s/output_ori_1.mp4'
 # Initialize DeepSORT tracker
 # Initialize DeepSORT tracker
-# tracker = DeepSort(
-#     max_age=30,              # Maximum number of frames to keep dead tracks
-#     n_init=2,                # Number of frames for track initialization
-#     nms_max_overlap=0.7,     # NMS threshold for suppressing overlapping detections
-#     max_iou_distance=0.7,    # Maximum IOU distance for matching
-#     max_cosine_distance=0.3, # Maximum cosine distance for feature matching
-#     nn_budget=100,           # Maximum size of the appearance descriptors gallery
-#     embedder="mobilenet",    # Feature extractor
-#     half=True,              # Use half precision for better speed
-#     bgr=True,
-#     embedder_gpu=True
-# )
-
-# DeepSORT tracker for faster processing
 tracker = DeepSort(
-    max_age=5,               # Reduced from 30 to prevent stale tracks
-    n_init=1,                # Reduced from 2 to initialize tracks faster
-    max_iou_distance=0.9,    # Increased from 0.7 to handle larger movements
-    max_cosine_distance=0.4, # Increased from 0.3 for more flexible matching
-    nn_budget=50,           # Reduced from 100 to save memory
-    embedder="mobilenet",
-    half=True,
+    max_age=30,              # Maximum number of frames to keep dead tracks
+    n_init=2,                # Number of frames for track initialization
+    nms_max_overlap=0.7,     # NMS threshold for suppressing overlapping detections
+    max_iou_distance=0.7,    # Maximum IOU distance for matching
+    max_cosine_distance=0.3, # Maximum cosine distance for feature matching
+    nn_budget=100,           # Maximum size of the appearance descriptors gallery
+    embedder="mobilenet",    # Feature extractor
+    half=True,              # Use half precision for better speed
     bgr=True,
     embedder_gpu=True
 )
-
-# Add display initialization
-def init_display():
-    # Configuration for CS and DC pins
-    cs_pin = digitalio.DigitalInOut(board.CE0)
-    dc_pin = digitalio.DigitalInOut(board.D25)
-    reset_pin = digitalio.DigitalInOut(board.D24)
-    
-    # Configure SPI
-    BAUDRATE = 24000000
-    
-    # Create the ST7789 display
-    spi = board.SPI()
-    display = st7789.ST7789(
-        spi,
-        rotation=90,  # Adjust rotation as needed
-        width=240,
-        height=320,
-        x_offset=0,
-        y_offset=0,
-        cs=cs_pin,
-        dc=dc_pin,
-        rst=reset_pin,
-        baudrate=BAUDRATE,
-    )
-    
-    # Enable backlight
-    backlight = digitalio.DigitalInOut(board.D22)
-    backlight.switch_to_output()
-    backlight.value = True
-    
-    return display
-
-def update_display(display, incorrect_count=0, total_count=0):
-    """
-    Update the TFT display with warning and status information
-    """
-    # Create a blank image with mode 'RGB'
-    image = Image.new('RGB', (display.width, display.height), (0, 0, 0))
-    draw = ImageDraw.Draw(image)
-    
-    # Try to load a font, fall back to default if not found
-    try:
-        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24)
-        small_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
-    except:
-        font = ImageFont.load_default()
-        small_font = ImageFont.load_default()
-    
-    # Draw status information
-    y_position = 10
-    draw.text((10, y_position), "Plank Monitor", font=font, fill=(255, 255, 255))
-    
-    y_position += 40
-    draw.text((10, y_position), f"Total: {total_count}", font=small_font, fill=(255, 255, 255))
-    
-    y_position += 30
-    draw.text((10, y_position), f"Incorrect: {incorrect_count}", font=small_font, 
-              fill=(255, 0, 0) if incorrect_count > 0 else (255, 255, 255))
-    
-    # Draw warning if there are incorrect planks
-    if incorrect_count > 0:
-        y_position += 50
-        warning_text = "WARNING!"
-        draw.text((10, y_position), warning_text, font=font, fill=(255, 0, 0))
-        
-        y_position += 40
-        message = "Incorrect plank"
-        message2 = "orientation detected!"
-        draw.text((10, y_position), message, font=small_font, fill=(255, 255, 0))
-        draw.text((10, y_position + 25), message2, font=small_font, fill=(255, 255, 0))
-    
-    # Display the image
-    display.image(image)
 
 def process_frame(frame, model, tracker):
     """
@@ -324,30 +231,25 @@ def draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds
     return frame
 
 def main():
-    # Initialize display
-    display = init_display()
-    
     # Initialize Pi camera with picamera2
     picam2 = Picamera2()
     
     # Configure camera
     config = picam2.create_video_configuration(
-        # main={"size": (640, 480), "format": "RGB888"},
-        main={"size": (320, 240), "format": "RGB888"},
+        main={"size": (640, 480), "format": "RGB888"},
         controls={"FrameDurationLimits": (33333, 33333)}  # ~30fps
     )
     picam2.configure(config)
     
-    # Add frame rate management
-    frame_interval = 1/10  # Process max 10 FPS
-    last_frame_time = 0
+    # Optional: Add auto-focus and exposure controls
+    picam2.set_controls({"AfMode": controls.AfModeEnum.Continuous})
+    picam2.set_controls({"AeEnable": True})
     
     # Start camera
     picam2.start()
     
     # Get video properties for output
-    # width, height = 640, 480  # Match with camera config
-    width, height = 320, 240  # Match with camera config
+    width, height = 640, 480  # Match with camera config
     custom_fps = 10  # Adjust based on your Pi's performance
     
     # Initialize video writer
@@ -355,21 +257,9 @@ def main():
     out = cv2.VideoWriter(output_path, fourcc, custom_fps, (width, height))
     
     try:
-        incorrect_count = 0
-        total_count = 0
         while True:
-            current_time = time.time()
-            
-            # Skip frames if we're processing too quickly
-            if current_time - last_frame_time < frame_interval:
-                continue
-                
             # Capture frame from picamera2
             frame = picam2.capture_array()
-            last_frame_time = current_time
-            
-            # Calculate processing time
-            process_start = time.time()
             
             # Convert frame from RGB to BGR for OpenCV compatibility
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
@@ -377,25 +267,11 @@ def main():
             # Process frame with ROI information
             tracked_objects, orientations, roi_bounds = process_frame(frame, model, tracker)
             
-            # Count incorrect orientations in ROI
-            incorrect_count = sum(1 for _, _, orientation, _, in_roi in orientations 
-                                if in_roi and orientation == "incorrect")
-            total_count = sum(1 for _, _, _, _, in_roi in orientations if in_roi)
-            
-            # Update display
-            update_display(display, incorrect_count, total_count)
-            
             # Draw results
             frame = draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds)
             
             # Write frame to output video
             out.write(frame)
-            
-            # Calculate and print FPS
-            process_time = time.time() - process_start
-            fps = 1 / (time.time() - last_frame_time)
-            cv2.putText(frame, f'FPS: {fps:.1f}', (10, 30), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
             
             # Display frame
             cv2.imshow('Tracking with Orientation', frame)
