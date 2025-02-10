@@ -1,0 +1,450 @@
+Starting detection and tracking. Press 'q' to quit.
+
+--- Frame 1 ---
+
+0: 480x640 (no detections), 848.6ms
+Speed: 4.6ms preprocess, 848.6ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 2 ---
+
+0: 480x640 (no detections), 826.4ms
+Speed: 2.7ms preprocess, 826.4ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 3 ---
+
+0: 480x640 (no detections), 847.0ms
+Speed: 2.8ms preprocess, 847.0ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 4 ---
+
+0: 480x640 (no detections), 830.4ms
+Speed: 2.8ms preprocess, 830.4ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 5 ---
+
+0: 480x640 (no detections), 840.6ms
+Speed: 2.8ms preprocess, 840.6ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 6 ---
+
+0: 480x640 (no detections), 827.1ms
+Speed: 2.8ms preprocess, 827.1ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 7 ---
+
+0: 480x640 (no detections), 822.2ms
+Speed: 2.8ms preprocess, 822.2ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 8 ---
+
+0: 480x640 (no detections), 820.9ms
+Speed: 2.7ms preprocess, 820.9ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 9 ---
+
+0: 480x640 (no detections), 855.5ms
+Speed: 2.7ms preprocess, 855.5ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 10 ---
+
+0: 480x640 (no detections), 828.7ms
+Speed: 2.7ms preprocess, 828.7ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 11 ---
+
+0: 480x640 (no detections), 828.9ms
+Speed: 2.9ms preprocess, 828.9ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 12 ---
+
+0: 480x640 (no detections), 830.2ms
+Speed: 2.8ms preprocess, 830.2ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 13 ---
+
+0: 480x640 (no detections), 819.7ms
+Speed: 2.8ms preprocess, 819.7ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 14 ---
+
+0: 480x640 (no detections), 828.4ms
+Speed: 2.7ms preprocess, 828.4ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 15 ---
+
+0: 480x640 (no detections), 828.3ms
+Speed: 2.8ms preprocess, 828.3ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 16 ---
+
+0: 480x640 (no detections), 834.0ms
+Speed: 2.7ms preprocess, 834.0ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 17 ---
+
+0: 480x640 (no detections), 819.8ms
+Speed: 2.7ms preprocess, 819.8ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 18 ---
+
+0: 480x640 (no detections), 824.9ms
+Speed: 2.7ms preprocess, 824.9ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 19 ---
+
+0: 480x640 (no detections), 821.4ms
+Speed: 2.7ms preprocess, 821.4ms inference, 0.8ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 20 ---
+
+0: 480x640 (no detections), 827.8ms
+Speed: 2.8ms preprocess, 827.8ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 21 ---
+
+0: 480x640 (no detections), 822.4ms
+Speed: 2.7ms preprocess, 822.4ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 22 ---
+
+0: 480x640 (no detections), 821.3ms
+Speed: 2.8ms preprocess, 821.3ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 23 ---
+
+0: 480x640 (no detections), 816.5ms
+Speed: 2.8ms preprocess, 816.5ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 24 ---
+
+0: 480x640 (no detections), 824.6ms
+Speed: 2.7ms preprocess, 824.6ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 25 ---
+
+0: 480x640 (no detections), 832.0ms
+Speed: 2.8ms preprocess, 832.0ms inference, 0.5ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 26 ---
+
+0: 480x640 (no detections), 822.7ms
+Speed: 2.7ms preprocess, 822.7ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 27 ---
+
+0: 480x640 (no detections), 832.0ms
+Speed: 2.8ms preprocess, 832.0ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 28 ---
+
+0: 480x640 (no detections), 817.5ms
+Speed: 2.7ms preprocess, 817.5ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 29 ---
+
+0: 480x640 (no detections), 829.7ms
+Speed: 2.7ms preprocess, 829.7ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 30 ---
+
+0: 480x640 (no detections), 820.6ms
+Speed: 2.7ms preprocess, 820.6ms inference, 0.5ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 31 ---
+
+0: 480x640 (no detections), 825.0ms
+Speed: 2.6ms preprocess, 825.0ms inference, 0.8ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 32 ---
+
+0: 480x640 (no detections), 821.8ms
+Speed: 2.6ms preprocess, 821.8ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 33 ---
+
+0: 480x640 (no detections), 820.6ms
+Speed: 2.9ms preprocess, 820.6ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 34 ---
+
+0: 480x640 (no detections), 828.1ms
+Speed: 2.8ms preprocess, 828.1ms inference, 0.5ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 35 ---
+
+0: 480x640 (no detections), 857.2ms
+Speed: 2.5ms preprocess, 857.2ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 36 ---
+
+0: 480x640 (no detections), 822.3ms
+Speed: 2.8ms preprocess, 822.3ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 37 ---
+
+0: 480x640 (no detections), 843.6ms
+Speed: 4.4ms preprocess, 843.6ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 38 ---
+
+0: 480x640 (no detections), 827.6ms
+Speed: 2.7ms preprocess, 827.6ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 39 ---
+
+0: 480x640 (no detections), 864.8ms
+Speed: 2.8ms preprocess, 864.8ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 40 ---
+
+0: 480x640 (no detections), 855.4ms
+Speed: 2.8ms preprocess, 855.4ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 41 ---
+
+0: 480x640 (no detections), 839.6ms
+Speed: 2.7ms preprocess, 839.6ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 42 ---
+
+0: 480x640 (no detections), 835.2ms
+Speed: 2.8ms preprocess, 835.2ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 43 ---
+
+0: 480x640 (no detections), 822.5ms
+Speed: 2.7ms preprocess, 822.5ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 44 ---
+
+0: 480x640 (no detections), 822.7ms
+Speed: 2.7ms preprocess, 822.7ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 45 ---
+
+0: 480x640 (no detections), 820.5ms
+Speed: 2.7ms preprocess, 820.5ms inference, 0.5ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 46 ---
+
+0: 480x640 (no detections), 826.1ms
+Speed: 2.6ms preprocess, 826.1ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 47 ---
+
+0: 480x640 (no detections), 822.4ms
+Speed: 2.7ms preprocess, 822.4ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 48 ---
+
+0: 480x640 (no detections), 833.1ms
+Speed: 2.7ms preprocess, 833.1ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 49 ---
+
+0: 480x640 (no detections), 824.5ms
+Speed: 2.6ms preprocess, 824.5ms inference, 0.8ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 50 ---
+
+0: 480x640 (no detections), 830.4ms
+Speed: 2.6ms preprocess, 830.4ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 51 ---
+
+^C
+Stopping capture...
+Cleaning up...
+Done!
+
+############ yolo11x
+Starting detection and tracking. Press 'q' to quit.
+
+--- Frame 1 ---
+
+0: 480x640 (no detections), 6335.3ms
+Speed: 4.5ms preprocess, 6335.3ms inference, 0.7ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 2 ---
+
+0: 480x640 (no detections), 6302.7ms
+Speed: 2.9ms preprocess, 6302.7ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 3 ---
+
+0: 480x640 (no detections), 6306.7ms
+Speed: 3.0ms preprocess, 6306.7ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 4 ---
+
+0: 480x640 (no detections), 6326.4ms
+Speed: 3.0ms preprocess, 6326.4ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+
+Detected objects: 0
+Summary: 0 tracked objects, 0 in ROI
+
+--- Frame 5 ---
+
+^C
+Stopping capture...
+Cleaning up...
+Done!
