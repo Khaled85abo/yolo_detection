@@ -10,9 +10,9 @@ from collections import defaultdict
 orientation_memory = defaultdict(lambda: {"orientation": "unknown", "angle": 0, "aspect_ratio": 0})
 
 # Initialize YOLO model
-model = YOLO('C:/Users/khale/LIA/train_yolo11s/weights/best_yolo11s.pt')
+model = YOLO('C:/Users/khale/LIA/train_yolo11n/weights/best_yolo11n.pt')
 video_path = 'C:/Users/khale/LIA/data/3.mp4'
-output_path = 'videos_output/yolo11s/output_ori_1.mp4'
+output_path = 'videos_output/yolo11n/output_ori_1.mp4'
 # Initialize DeepSORT tracker
 # Initialize DeepSORT tracker
 tracker = DeepSort(
