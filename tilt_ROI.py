@@ -9,11 +9,17 @@ from collections import defaultdict
 # Add this as a global variable
 orientation_memory = defaultdict(lambda: {"orientation": "unknown", "angle": 0, "aspect_ratio": 0})
 
+# ROI parameters
+ROI_start = 0.40
+ROI_end = 0.60
+
+# aspect ratio
+aspect_ratio_threshold = 0.60
 # Initialize YOLO model
 model = YOLO('C:/Users/khale/LIA/train_yolo11n/weights/best_yolo11n.pt')
 print("Available classes in the model:", model.names)
 video_path = 'C:/Users/khale/LIA/data/3.mp4'
-output_path = 'videos_output/yolo11n/output_ori_2.mp4'
+output_path = 'videos_output/yolo11n/output_ori_3.mp4'
 # Initialize DeepSORT tracker
 # Initialize DeepSORT tracker
 tracker = DeepSort(
@@ -39,8 +45,8 @@ def process_frame(frame, model, tracker):
     frame_height, frame_width = frame.shape[:2]
     
     # Define the region of interest (middle of the frame)
-    roi_x_start = int(frame_width * 0.35)
-    roi_x_end = int(frame_width * 0.65)
+    roi_x_start = int(frame_width * ROI_start)
+    roi_x_end = int(frame_width * ROI_end)
     
     results = model(frame, conf=0.5)[0]
     
@@ -155,11 +161,13 @@ def get_plank_orientation(points, width, height):
     elif angle > 90:
         angle -= 180
     
-    # More lenient aspect ratio thresholds
-    if 0.2 <= aspect_ratio <= 0.6:  # Wider range for correct orientation
+    # For vertical planks (correct orientation), aspect ratio should be < 1
+    if aspect_ratio < aspect_ratio_threshold:  # height is significantly larger than width
         orientation = "correct"
+    # elif aspect_ratio > 1.5:  # width is significantly larger than height
+    #     orientation = "incorrect"
     else:
-        orientation = "incorrect"
+        orientation = "incorrect"  # For cases where orientation is ambiguous
         
     return orientation, angle, aspect_ratio
 
