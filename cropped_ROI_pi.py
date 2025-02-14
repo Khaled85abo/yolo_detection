@@ -244,7 +244,11 @@ def main():
 
     print("Configuring camera settings...")
     full_width, full_height = 640, 480
+    
+    # Ensure ROI width is even
     roi_width = int(full_width * (ROI_end - ROI_start))
+    if roi_width % 2 != 0:
+        roi_width += 1  # Make it even
     
     print(f"Full dimensions: {full_width}x{full_height}")
     print(f"ROI width: {roi_width}")
@@ -268,39 +272,47 @@ def main():
         os.makedirs(output_dir)
         print(f"Created output directory: {output_dir}")
 
-    print(f"Initializing video writer (Output: {output_path})")
-    print(f"Output dimensions: {roi_width}x{full_height}")
+    # Try with a simple output path first
+    test_output = 'test_output.avi'
+    print(f"Testing VideoWriter with simple path: {test_output}")
     
-    # Try with basic uncompressed format first
     try:
-        fourcc = cv2.VideoWriter_fourcc('I', '4', '2', '0')
-        output_avi = output_path.rsplit('.', 1)[0] + '.avi'
-        out = cv2.VideoWriter(output_avi, fourcc, custom_fps, (roi_width, full_height))
+        fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
+        test_out = cv2.VideoWriter(test_output, fourcc, custom_fps, (roi_width, full_height))
         
-        # Verify the writer works
-        test_frame = np.zeros((full_height, roi_width, 3), dtype=np.uint8)
-        if out.isOpened() and out.write(test_frame):
-            output_path = output_avi
-            print(f"Successfully initialized VideoWriter with I420 codec")
-        else:
-            raise Exception("Failed to write test frame")
+        if test_out.isOpened():
+            print("VideoWriter opened successfully with test path")
+            test_out.release()
             
-    except Exception as e:
-        print(f"Failed to initialize VideoWriter with I420: {str(e)}")
-        print("Trying with MJPG codec...")
-        
-        try:
-            fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
+            # Now try with the actual output path
+            output_avi = output_path.rsplit('.', 1)[0] + '.avi'
             out = cv2.VideoWriter(output_avi, fourcc, custom_fps, (roi_width, full_height))
             
-            if out.isOpened() and out.write(test_frame):
+            if out.isOpened():
                 output_path = output_avi
-                print(f"Successfully initialized VideoWriter with MJPG codec")
+                print(f"Successfully initialized VideoWriter: {output_path}")
             else:
-                raise Exception("Failed to write test frame")
+                raise Exception("Failed to open VideoWriter with actual path")
+        else:
+            raise Exception("Failed to open VideoWriter with test path")
+            
+    except Exception as e:
+        print(f"Failed to initialize VideoWriter: {str(e)}")
+        print("Trying with absolute path...")
+        
+        try:
+            # Try with absolute path
+            abs_path = os.path.abspath(output_path.rsplit('.', 1)[0] + '.avi')
+            out = cv2.VideoWriter(abs_path, fourcc, custom_fps, (roi_width, full_height))
+            
+            if out.isOpened():
+                output_path = abs_path
+                print(f"Successfully initialized VideoWriter with absolute path: {output_path}")
+            else:
+                raise Exception("Failed to open VideoWriter with absolute path")
                 
         except Exception as e:
-            print(f"Failed to initialize VideoWriter with MJPG: {str(e)}")
+            print(f"Failed to initialize VideoWriter with absolute path: {str(e)}")
             print("Error: Could not initialize VideoWriter!")
             return
 
