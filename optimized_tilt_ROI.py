@@ -19,7 +19,7 @@ aspect_ratio_threshold = 0.60
 model = YOLO('C:/Users/khale/LIA/train_yolo11n/weights/best_yolo11n.pt')
 print("Available classes in the model:", model.names)
 video_path = 'C:/Users/khale/LIA/data/3.mp4'
-output_path = 'videos_output/yolo11n/output_ori_3.mp4'
+output_path = 'videos_output/yolo11n/output_ori_4.mp4'
 # Initialize DeepSORT tracker
 # Initialize DeepSORT tracker
 tracker = DeepSort(
@@ -48,7 +48,11 @@ def process_frame(frame, model, tracker):
     roi_x_start = int(frame_width * ROI_start)
     roi_x_end = int(frame_width * ROI_end)
     
-    results = model(frame, conf=0.5)[0]
+    # Crop frame to ROI
+    roi_frame = frame[:, roi_x_start:roi_x_end]
+    
+    # YOLO detection on ROI only
+    results = model(roi_frame, conf=0.5)[0]
     
     # Print detected objects and their classes
     print(f"\nDetected objects: {len(results.boxes)}")
@@ -73,6 +77,9 @@ def process_frame(frame, model, tracker):
         height = y2 - y1
         
         if confidence > 0.3 and width > 20 and height > 20:
+            # Adjust coordinates to account for ROI cropping
+            x1 += roi_x_start
+            x2 += roi_x_start
             bbox = [x1, y1, width, height]
             detections.append((bbox, confidence, class_id))
             
