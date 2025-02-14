@@ -7,6 +7,7 @@ import torch
 from collections import defaultdict
 from picamera2 import Picamera2
 import time
+import os
 
 # Add this as a global variable
 orientation_memory = defaultdict(lambda: {"orientation": "unknown", "angle": 0, "aspect_ratio": 0})
@@ -261,45 +262,47 @@ def main():
 
     custom_fps = 10
 
+    # Create output directory if it doesn't exist
+    output_dir = os.path.dirname(output_path)
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        print(f"Created output directory: {output_dir}")
+
     print(f"Initializing video writer (Output: {output_path})")
     print(f"Output dimensions: {roi_width}x{full_height}")
     
-    # Try different codecs in order of preference, using simpler codecs
-    codecs = [
-        ('MJPG', '.avi'),    # Motion JPEG
-        ('XVID', '.avi'),    # XVID
-        ('I420', '.avi'),    # Raw I420 (YUV)
-        ('DIVX', '.avi'),    # DIVX
-        ('YUV4', '.avi'),    # Raw YUV
-    ]
-    
-    out = None
-    base_path = output_path.rsplit('.', 1)[0]
-    
-    for codec, ext in codecs:
+    # Try with basic uncompressed format first
+    try:
+        fourcc = cv2.VideoWriter_fourcc('I', '4', '2', '0')
+        output_avi = output_path.rsplit('.', 1)[0] + '.avi'
+        out = cv2.VideoWriter(output_avi, fourcc, custom_fps, (roi_width, full_height))
+        
+        # Verify the writer works
+        test_frame = np.zeros((full_height, roi_width, 3), dtype=np.uint8)
+        if out.isOpened() and out.write(test_frame):
+            output_path = output_avi
+            print(f"Successfully initialized VideoWriter with I420 codec")
+        else:
+            raise Exception("Failed to write test frame")
+            
+    except Exception as e:
+        print(f"Failed to initialize VideoWriter with I420: {str(e)}")
+        print("Trying with MJPG codec...")
+        
         try:
-            current_output = base_path + ext
-            print(f"Trying codec {codec} with output: {current_output}")
+            fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
+            out = cv2.VideoWriter(output_avi, fourcc, custom_fps, (roi_width, full_height))
             
-            fourcc = cv2.VideoWriter_fourcc(*codec)
-            test_out = cv2.VideoWriter(current_output, fourcc, custom_fps, (roi_width, full_height))
-            
-            # Try writing a test frame to verify it works
-            test_frame = np.zeros((full_height, roi_width, 3), dtype=np.uint8)
-            if test_out.isOpened() and test_out.write(test_frame):
-                out = test_out
-                output_path = current_output
-                print(f"Successfully opened VideoWriter with codec {codec}")
-                break
+            if out.isOpened() and out.write(test_frame):
+                output_path = output_avi
+                print(f"Successfully initialized VideoWriter with MJPG codec")
             else:
-                print(f"Codec {codec} opened but failed to write")
-                test_out.release()
+                raise Exception("Failed to write test frame")
+                
         except Exception as e:
-            print(f"Failed to open VideoWriter with codec {codec}: {str(e)}")
-    
-    if out is None:
-        print("Error: Could not initialize VideoWriter with any codec!")
-        return
+            print(f"Failed to initialize VideoWriter with MJPG: {str(e)}")
+            print("Error: Could not initialize VideoWriter!")
+            return
 
     print(f"Final output path: {output_path}")
 
