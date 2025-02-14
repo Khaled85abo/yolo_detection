@@ -264,28 +264,35 @@ def main():
     print(f"Initializing video writer (Output: {output_path})")
     print(f"Output dimensions: {roi_width}x{full_height}")
     
-    # Try different codecs in order of preference
+    # Try different codecs in order of preference, using simpler codecs
     codecs = [
-        ('avc1', '.mp4'),
-        ('XVID', '.avi'),
-        ('MJPG', '.avi'),
-        ('X264', '.avi')
+        ('MJPG', '.avi'),    # Motion JPEG
+        ('XVID', '.avi'),    # XVID
+        ('I420', '.avi'),    # Raw I420 (YUV)
+        ('DIVX', '.avi'),    # DIVX
+        ('YUV4', '.avi'),    # Raw YUV
     ]
     
     out = None
+    base_path = output_path.rsplit('.', 1)[0]
+    
     for codec, ext in codecs:
         try:
-            # Modify output path to use the current codec's extension
-            current_output = output_path.rsplit('.', 1)[0] + ext
+            current_output = base_path + ext
+            print(f"Trying codec {codec} with output: {current_output}")
+            
             fourcc = cv2.VideoWriter_fourcc(*codec)
             test_out = cv2.VideoWriter(current_output, fourcc, custom_fps, (roi_width, full_height))
             
-            if test_out.isOpened():
+            # Try writing a test frame to verify it works
+            test_frame = np.zeros((full_height, roi_width, 3), dtype=np.uint8)
+            if test_out.isOpened() and test_out.write(test_frame):
                 out = test_out
-                output_path = current_output  # Update the output path
+                output_path = current_output
                 print(f"Successfully opened VideoWriter with codec {codec}")
                 break
             else:
+                print(f"Codec {codec} opened but failed to write")
                 test_out.release()
         except Exception as e:
             print(f"Failed to open VideoWriter with codec {codec}: {str(e)}")
@@ -293,6 +300,8 @@ def main():
     if out is None:
         print("Error: Could not initialize VideoWriter with any codec!")
         return
+
+    print(f"Final output path: {output_path}")
 
     try:
         frame_count = 0
