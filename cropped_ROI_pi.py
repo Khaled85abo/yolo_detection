@@ -237,6 +237,7 @@ def draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds
     return frame
 
 def main():
+    global output_path
     print("Initializing camera...")
     picam2 = Picamera2()
 
