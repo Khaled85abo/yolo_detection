@@ -262,11 +262,35 @@ def main():
 
     print(f"Initializing video writer (Output: {output_path})")
     print(f"Output dimensions: {roi_width}x{full_height}")
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    out = cv2.VideoWriter(output_path, fourcc, custom_fps, (roi_width, full_height))
-
-    if not out.isOpened():
-        print("Error: VideoWriter failed to open!")
+    
+    # Try different codecs in order of preference
+    codecs = [
+        ('avc1', '.mp4'),
+        ('XVID', '.avi'),
+        ('MJPG', '.avi'),
+        ('X264', '.avi')
+    ]
+    
+    out = None
+    for codec, ext in codecs:
+        try:
+            # Modify output path to use the current codec's extension
+            current_output = output_path.rsplit('.', 1)[0] + ext
+            fourcc = cv2.VideoWriter_fourcc(*codec)
+            test_out = cv2.VideoWriter(current_output, fourcc, custom_fps, (roi_width, full_height))
+            
+            if test_out.isOpened():
+                out = test_out
+                output_path = current_output  # Update the output path
+                print(f"Successfully opened VideoWriter with codec {codec}")
+                break
+            else:
+                test_out.release()
+        except Exception as e:
+            print(f"Failed to open VideoWriter with codec {codec}: {str(e)}")
+    
+    if out is None:
+        print("Error: Could not initialize VideoWriter with any codec!")
         return
 
     try:
