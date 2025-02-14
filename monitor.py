@@ -6,7 +6,6 @@ import torch
 # Add this at the top with other imports
 from collections import defaultdict
 from picamera2 import Picamera2
-from libcamera import controls
 import time
 
 # Add this as a global variable
@@ -58,6 +57,13 @@ def process_frame(frame, model, tracker):
         x1, y1, x2, y2 = map(int, box.xyxy[0])
         confidence = box.conf[0].item()
         class_id = int(box.cls[0].item())
+        
+        # Get class name from model's names dictionary
+        class_name = results.names[class_id]
+        
+        # Only process if it's a plank
+        if class_name != "plank":
+            continue
 
         # Calculate width and height
         width = x2 - x1

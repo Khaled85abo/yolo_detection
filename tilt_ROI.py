@@ -11,8 +11,9 @@ orientation_memory = defaultdict(lambda: {"orientation": "unknown", "angle": 0, 
 
 # Initialize YOLO model
 model = YOLO('C:/Users/khale/LIA/train_yolo11n/weights/best_yolo11n.pt')
+print("Available classes in the model:", model.names)
 video_path = 'C:/Users/khale/LIA/data/3.mp4'
-output_path = 'videos_output/yolo11n/output_ori_1.mp4'
+output_path = 'videos_output/yolo11n/output_ori_2.mp4'
 # Initialize DeepSORT tracker
 # Initialize DeepSORT tracker
 tracker = DeepSort(
@@ -43,6 +44,9 @@ def process_frame(frame, model, tracker):
     
     results = model(frame, conf=0.5)[0]
     
+    # Print detected objects and their classes
+    print(f"\nDetected objects: {len(results.boxes)}")
+    
     detections = []
     detection_points = {}  # Use dictionary to maintain correspondence
     
@@ -50,6 +54,13 @@ def process_frame(frame, model, tracker):
         x1, y1, x2, y2 = map(int, box.xyxy[0])
         confidence = box.conf[0].item()
         class_id = int(box.cls[0].item())
+        class_name = model.names[class_id]
+        
+        print(f"Detected {class_name} (ID: {class_id}) with confidence: {confidence:.2f}")
+        
+        # Only process if it's a plank
+        if class_name != "plank":  # Adjust this based on the actual class name in your model
+            continue
         
         # Calculate width and height
         width = x2 - x1
