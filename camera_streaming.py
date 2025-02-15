@@ -8,7 +8,6 @@ from collections import defaultdict
 from picamera2 import Picamera2
 import time
 import os
-from flask import Flask, Response
 import threading
 from queue import Queue
 import logging
@@ -41,11 +40,7 @@ tracker = DeepSort(
     embedder_gpu=True
 )
 
-# Add these as global variables
-app = Flask(__name__)
-frame_queue = Queue(maxsize=2)  # Buffer only 2 frames to prevent lag
-latest_frame = None
-frame_lock = threading.Lock()
+
 
 def process_frame(frame, model, tracker):
     """
@@ -246,52 +241,13 @@ def draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds
         cv2.line(frame, (center_x, center_y), (end_x, end_y), color, 2)
 
     return frame
-
-def generate_frames():
-    """Generator function for streaming frames"""
-    global latest_frame
-    while True:
-        with frame_lock:
-            if latest_frame is not None:
-                try:
-                    # Reduce JPEG quality for faster streaming
-                    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
-                    _, buffer = cv2.imencode('.jpg', latest_frame, encode_param)
-                    frame_bytes = buffer.tobytes()
-                    yield (b'--frame\r\n'
-                           b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-                except Exception as e:
-                    print(f"Error in generate_frames: {e}")
-                    continue
-        time.sleep(0.03)  # Add small delay to prevent overwhelming the network
-
-@app.route('/video_feed')
-def video_feed():
-    """Route for streaming video"""
-    return Response(generate_frames(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
-
-@app.route('/')
-def index():
-    """Route for main page"""
-    return """
-    <html>
-        <body>
-            <h1>Plank Detection Stream</h1>
-            <img src="/video_feed" width="640" height="480" />
-            <p>Status: Streaming</p>
-        </body>
-    </html>
-    """
-
-def run_flask():
-    """Function to run Flask server"""
-    # Disable debug mode and reduce logging
-    logging.getLogger('werkzeug').setLevel(logging.ERROR)
-    # app.run(host='0.0.0.0', port=5000, threaded=True, debug=False)
-    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
-
 def main():
+    from stream_server_flask import StreamServer
+    print("Starting stream server...")
+    server = StreamServer()
+    server.add_camera('camera1')
+    server.run_threaded()
+
     global output_path
     print("Initializing camera...")
     picam2 = Picamera2()
@@ -372,11 +328,7 @@ def main():
 
     print(f"Final output path: {output_path}")
 
-    # Start Flask server in a separate thread
-    print("Starting Flask server...")
-    flask_thread = threading.Thread(target=run_flask)
-    flask_thread.daemon = True
-    flask_thread.start()
+
 
     try:
         frame_count = 0
@@ -421,11 +373,7 @@ def main():
             frame = draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds)
             draw_end = time.time()
             
-            # Update the latest frame for streaming with a copy
-            with frame_lock:
-                # Resize frame for streaming to reduce bandwidth
-                stream_frame = cv2.resize(frame, (640, 480))
-                latest_frame = stream_frame.copy()
+            server.update_frame('camera1', frame)
             
             # Write original frame to video file
             out_write_start = time.time()
