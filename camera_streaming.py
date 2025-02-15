@@ -288,7 +288,8 @@ def run_flask():
     """Function to run Flask server"""
     # Disable debug mode and reduce logging
     logging.getLogger('werkzeug').setLevel(logging.ERROR)
-    app.run(host='0.0.0.0', port=5000, threaded=True, debug=False)
+    # app.run(host='0.0.0.0', port=5000, threaded=True, debug=False)
+    app.run(host='0.0.0.0', port=5000, debug=False, use_reloader=False)
 
 def main():
     global output_path
