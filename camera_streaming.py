@@ -253,11 +253,17 @@ def generate_frames():
     while True:
         with frame_lock:
             if latest_frame is not None:
-                # Encode the frame as JPEG
-                _, buffer = cv2.imencode('.jpg', latest_frame)
-                frame_bytes = buffer.tobytes()
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                try:
+                    # Reduce JPEG quality for faster streaming
+                    encode_param = [int(cv2.IMWRITE_JPEG_QUALITY), 70]
+                    _, buffer = cv2.imencode('.jpg', latest_frame, encode_param)
+                    frame_bytes = buffer.tobytes()
+                    yield (b'--frame\r\n'
+                           b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                except Exception as e:
+                    print(f"Error in generate_frames: {e}")
+                    continue
+        time.sleep(0.03)  # Add small delay to prevent overwhelming the network
 
 @app.route('/video_feed')
 def video_feed():
@@ -273,13 +279,16 @@ def index():
         <body>
             <h1>Plank Detection Stream</h1>
             <img src="/video_feed" width="640" height="480" />
+            <p>Status: Streaming</p>
         </body>
     </html>
     """
 
 def run_flask():
     """Function to run Flask server"""
-    app.run(host='0.0.0.0', port=5000, threaded=True)
+    # Disable debug mode and reduce logging
+    logging.getLogger('werkzeug').setLevel(logging.ERROR)
+    app.run(host='0.0.0.0', port=5000, threaded=True, debug=False)
 
 def main():
     global output_path
@@ -411,11 +420,13 @@ def main():
             frame = draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds)
             draw_end = time.time()
             
-            # Update the latest frame for streaming
+            # Update the latest frame for streaming with a copy
             with frame_lock:
-                latest_frame = frame.copy()  # Create a copy to prevent any potential threading issues
+                # Resize frame for streaming to reduce bandwidth
+                stream_frame = cv2.resize(frame, (640, 480))
+                latest_frame = stream_frame.copy()
             
-            # Write frame to video file (existing code)
+            # Write original frame to video file
             out_write_start = time.time()
             out.write(frame)
             out_write_end = time.time()

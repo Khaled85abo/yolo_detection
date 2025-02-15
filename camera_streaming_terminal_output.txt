@@ -1,0 +1,302 @@
+--- Frame 179 ---
+
+0: 640x192 (no detections), 135.3ms
+Speed: 1.9ms preprocess, 135.3ms inference, 0.5ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 0.139s | YOLO: 0.138s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 179 total: 0.142s | capture: 0.001s | color_conv: 0.000s | process_frame: 0.139s | draw: 0.000s | write: 0.002s
+
+--- Frame 180 ---
+
+0: 640x192 (no detections), 135.3ms
+Speed: 1.9ms preprocess, 135.3ms inference, 0.5ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 0.138s | YOLO: 0.138s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 180 total: 0.142s | capture: 0.001s | color_conv: 0.000s | process_frame: 0.139s | draw: 0.000s | write: 0.002s
+
+--- Frame 181 ---
+
+0: 640x192 (no detections), 134.6ms
+Speed: 1.9ms preprocess, 134.6ms inference, 0.5ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 0.138s | YOLO: 0.138s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 181 total: 0.141s | capture: 0.001s | color_conv: 0.000s | process_frame: 0.138s | draw: 0.000s | write: 0.002s
+
+--- Frame 182 ---
+
+0: 640x192 (no detections), 135.6ms
+Speed: 1.9ms preprocess, 135.6ms inference, 0.5ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 0.139s | YOLO: 0.139s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 182 total: 0.142s | capture: 0.001s | color_conv: 0.000s | process_frame: 0.139s | draw: 0.000s | write: 0.002s
+
+--- Frame 183 ---
+
+0: 640x192 (no detections), 135.4ms
+Speed: 1.9ms preprocess, 135.4ms inference, 0.5ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 0.139s | YOLO: 0.138s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 183 total: 0.142s | capture: 0.001s | color_conv: 0.000s | process_frame: 0.139s | draw: 0.000s | write: 0.002s
+
+--- Frame 184 ---
+
+192.168.1.186 - - [15/Feb/2025 02:39:16] "GET / HTTP/1.1" 200 -
+0: 640x192 (no detections), 136.2ms
+Speed: 1.9ms preprocess, 136.2ms inference, 0.5ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 0.139s | YOLO: 0.139s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 184 total: 0.142s | capture: 0.001s | color_conv: 0.000s | process_frame: 0.139s | draw: 0.000s | write: 0.002s
+
+--- Frame 185 ---
+
+0: 640x192 (no detections), 136.7ms
+Speed: 1.9ms preprocess, 136.7ms inference, 0.6ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 0.140s | YOLO: 0.140s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 185 total: 0.143s | capture: 0.001s | color_conv: 0.000s | process_frame: 0.140s | draw: 0.000s | write: 0.002s
+
+--- Frame 186 ---
+
+0: 640x192 (no detections), 770.5ms
+Speed: 1.9ms preprocess, 770.5ms inference, 175.9ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 1.005s | YOLO: 0.995s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 186 total: 1.033s | capture: 0.000s | color_conv: 0.000s | process_frame: 1.010s | draw: 0.000s | write: 0.007s
+
+--- Frame 187 ---
+
+0: 640x192 (no detections), 1914.1ms
+Speed: 46.6ms preprocess, 1914.1ms inference, 148.2ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 2.161s | YOLO: 2.145s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 187 total: 2.285s | capture: 0.102s | color_conv: 0.010s | process_frame: 2.166s | draw: 0.000s | write: 0.007s
+
+--- Frame 188 ---
+
+0: 640x192 (no detections), 2162.0ms
+Speed: 52.4ms preprocess, 2162.0ms inference, 179.1ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 2.449s | YOLO: 2.426s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 188 total: 2.574s | capture: 0.097s | color_conv: 0.010s | process_frame: 2.454s | draw: 0.000s | write: 0.007s
+
+--- Frame 189 ---
+
+0: 640x192 (no detections), 1613.8ms
+Speed: 41.7ms preprocess, 1613.8ms inference, 0.5ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 1.683s | YOLO: 1.677s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 189 total: 1.831s | capture: 0.112s | color_conv: 0.020s | process_frame: 1.693s | draw: 0.000s | write: 0.005s
+
+--- Frame 190 ---
+
+0: 640x192 (no detections), 2072.3ms
+Speed: 46.2ms preprocess, 2072.3ms inference, 204.8ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 2.355s | YOLO: 2.355s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 190 total: 2.479s | capture: 0.092s | color_conv: 0.010s | process_frame: 2.365s | draw: 0.000s | write: 0.007s
+
+--- Frame 191 ---
+
+0: 640x192 (no detections), 2063.6ms
+Speed: 56.9ms preprocess, 2063.6ms inference, 213.1ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 2.355s | YOLO: 2.349s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 191 total: 2.429s | capture: 0.046s | color_conv: 0.010s | process_frame: 2.360s | draw: 0.000s | write: 0.007s
+
+--- Frame 192 ---
+
+0: 640x192 (no detections), 2012.3ms
+Speed: 47.3ms preprocess, 2012.3ms inference, 153.9ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 2.275s | YOLO: 2.260s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 192 total: 2.344s | capture: 0.036s | color_conv: 0.010s | process_frame: 2.285s | draw: 0.000s | write: 0.007s
+
+--- Frame 193 ---
+
+0: 640x192 (no detections), 1999.7ms
+Speed: 68.1ms preprocess, 1999.7ms inference, 209.3ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 2.329s | YOLO: 2.323s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 193 total: 2.433s | capture: 0.081s | color_conv: 0.010s | process_frame: 2.329s | draw: 0.000s | write: 0.007s
+
+--- Frame 194 ---
+
+0: 640x192 (no detections), 1803.1ms
+Speed: 42.1ms preprocess, 1803.1ms inference, 174.1ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 2.056s | YOLO: 2.051s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 194 total: 2.114s | capture: 0.041s | color_conv: 0.000s | process_frame: 2.061s | draw: 0.000s | write: 0.007s
+
+--- Frame 195 ---
+
+0: 640x192 (no detections), 1917.0ms
+Speed: 37.2ms preprocess, 1917.0ms inference, 194.3ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 2.184s | YOLO: 2.174s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 195 total: 2.266s | capture: 0.046s | color_conv: 0.016s | process_frame: 2.189s | draw: 0.000s | write: 0.005s
+
+--- Frame 196 ---
+
+192.168.1.186 - - [15/Feb/2025 02:39:38] "GET /video-feed HTTP/1.1" 404 -
+192.168.1.186 - - [15/Feb/2025 02:39:39] "GET /favicon.ico HTTP/1.1" 404 -
+0: 640x192 (no detections), 1729.5ms
+Speed: 53.0ms preprocess, 1729.5ms inference, 188.5ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 2.048s | YOLO: 2.043s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 196 total: 2.160s | capture: 0.091s | color_conv: 0.005s | process_frame: 2.053s | draw: 0.000s | write: 0.005s
+
+--- Frame 197 ---
+
+0: 640x192 (no detections), 1841.6ms
+Speed: 37.7ms preprocess, 1841.6ms inference, 194.2ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 2.140s | YOLO: 2.125s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 197 total: 2.194s | capture: 0.026s | color_conv: 0.005s | process_frame: 2.151s | draw: 0.000s | write: 0.007s
+
+--- Frame 198 ---
+
+0: 640x192 (no detections), 1993.4ms
+Speed: 57.3ms preprocess, 1993.4ms inference, 163.4ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 2.276s | YOLO: 2.266s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 198 total: 2.373s | capture: 0.061s | color_conv: 0.011s | process_frame: 2.281s | draw: 0.000s | write: 0.010s
+
+--- Frame 199 ---
+
+0: 640x192 (no detections), 1827.3ms
+Speed: 51.4ms preprocess, 1827.3ms inference, 175.5ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 2.106s | YOLO: 2.091s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 199 total: 2.231s | capture: 0.097s | color_conv: 0.000s | process_frame: 2.111s | draw: 0.000s | write: 0.007s
+
+--- Frame 200 ---
+
+0: 640x192 (no detections), 1881.6ms
+Speed: 22.5ms preprocess, 1881.6ms inference, 195.8ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 2.141s | YOLO: 2.126s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 200 total: 2.246s | capture: 0.082s | color_conv: 0.005s | process_frame: 2.147s | draw: 0.000s | write: 0.007s
+
+--- Frame 201 ---
+
+0: 640x192 (no detections), 2107.2ms
+Speed: 47.7ms preprocess, 2107.2ms inference, 206.8ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 2.414s | YOLO: 2.403s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 201 total: 2.445s | capture: 0.016s | color_conv: 0.010s | process_frame: 2.414s | draw: 0.000s | write: 0.005s
+
+--- Frame 202 ---
+
+0: 640x192 (no detections), 2049.0ms
+Speed: 59.2ms preprocess, 2049.0ms inference, 151.6ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 2.317s | YOLO: 2.312s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 202 total: 2.458s | capture: 0.099s | color_conv: 0.010s | process_frame: 2.332s | draw: 0.000s | write: 0.007s
+
+--- Frame 203 ---
+
+0: 640x192 (no detections), 1736.7ms
+Speed: 46.8ms preprocess, 1736.7ms inference, 0.5ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 1.826s | YOLO: 1.826s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 203 total: 1.994s | capture: 0.127s | color_conv: 0.010s | process_frame: 1.831s | draw: 0.000s | write: 0.005s
+
+--- Frame 204 ---
+
+0: 640x192 (no detections), 1611.0ms
+Speed: 52.1ms preprocess, 1611.0ms inference, 0.5ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 1.669s | YOLO: 1.669s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 204 total: 1.706s | capture: 0.016s | color_conv: 0.010s | process_frame: 1.669s | draw: 0.000s | write: 0.010s
+
+--- Frame 205 ---
+
+0: 640x192 (no detections), 1914.5ms
+Speed: 53.3ms preprocess, 1914.5ms inference, 179.0ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 2.188s | YOLO: 2.178s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 205 total: 2.291s | capture: 0.077s | color_conv: 0.010s | process_frame: 2.199s | draw: 0.000s | write: 0.005s
+
+--- Frame 206 ---
+
+0: 640x192 (no detections), 1904.3ms
+Speed: 48.6ms preprocess, 1904.3ms inference, 5.7ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 1.999s | YOLO: 1.993s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 206 total: 2.128s | capture: 0.107s | color_conv: 0.000s | process_frame: 2.004s | draw: 0.000s | write: 0.007s
+
+--- Frame 207 ---
+
+0: 640x192 (no detections), 2231.9ms
+Speed: 34.6ms preprocess, 2231.9ms inference, 198.2ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 2.501s | YOLO: 2.486s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 207 total: 2.604s | capture: 0.082s | color_conv: 0.005s | process_frame: 2.501s | draw: 0.000s | write: 0.010s
+
+--- Frame 208 ---
+
+0: 640x192 (no detections), 2005.6ms
+Speed: 68.4ms preprocess, 2005.6ms inference, 77.1ms postprocess per image at shape (1, 3, 640, 192)
+
+Detected objects: 0
+[process_frame] Total: 2.235s | YOLO: 2.225s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Summary: 0 tracked objects
+[main loop] Frame 208 total: 2.347s | capture: 0.092s | color_conv: 0.010s | process_frame: 2.235s | draw: 0.000s | write: 0.005s
