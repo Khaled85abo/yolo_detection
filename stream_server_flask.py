@@ -1,18 +1,69 @@
+# def main():
+#     # Import the StreamServer at the top of main to avoid circular imports
+#     from stream_server import StreamServer
+    
+#     // ... existing code ...
+    
+#     # Initialize and start the streaming server
+#     print("Starting streaming server...")
+#     server = StreamServer()
+#     server.add_camera('camera1')  # Add our camera
+#     server.run_threaded()
+    
+#     try:
+#         frame_count = 0
+#         while True:
+#             // ... existing code ...
+            
+#             # Update the frame for streaming
+#             server.update_frame('camera1', frame)
+            
+#             # Write original frame to video file
+#             out_write_start = time.time()
+#             out.write(frame)
+#             out_write_end = time.time()
+            
+#             // ... existing code ...
+
+
+# server1 = StreamServer()
+# server2 = StreamServer()
+# print(server1 is server2)  # Will print True
+
+
 from flask import Flask, Response
 import cv2
 import threading
 from queue import Queue
 import logging
 
+
+# Singleton class to ensure only one instance of StreamServer is created, even if multiple instances are created in different files.
 class StreamServer:
+    _instance = None
+    _lock = threading.Lock()
+
+# The combination of __new__ and _instance ensures we only ever create one StreamServer instance.
+    def __new__(cls):
+        with cls._lock:                      # 1. Thread-safe lock
+            if cls._instance is None:        # 2. Check if instance exists
+                # 3. Create new instance if none exists
+                cls._instance = super(StreamServer, cls).__new__(cls)
+                
+                # 4. Initialize the instance attributes
+                cls._instance.app = Flask(__name__)
+                cls._instance.cameras = {}
+                cls._instance.frame_locks = {}
+                
+                # 5. Set up Flask routes
+                cls._instance.app.route('/')(cls._instance.index)
+                cls._instance.app.route('/video_feed/<camera_id>')(cls._instance.video_feed)
+                
+            return cls._instance             # 6. Return existing or new instance
+
     def __init__(self):
-        self.app = Flask(__name__)
-        self.cameras = {}  # Dictionary to store camera feeds
-        self.frame_locks = {}  # Dictionary to store frame locks
-        
-        # Route definitions
-        self.app.route('/')(self.index)
-        self.app.route('/video_feed/<camera_id>')(self.video_feed)
+        # Skip initialization if already done
+        pass
     
     def add_camera(self, camera_id):
         """Add a new camera feed"""
