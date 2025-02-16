@@ -242,11 +242,16 @@ def draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds
 
     return frame
 def main():
-    from stream_server_flask import StreamServer
-    print("Starting stream server...")
-    server = StreamServer()
-    server.add_camera('camera1')
-    server.run_threaded()
+    try:
+        from stream_server_flask import StreamServer
+        print("Starting stream server...")
+        server = StreamServer()
+        server.add_camera('camera1')
+        server_thread = server.run_threaded()
+        print("Stream server started successfully")
+    except Exception as e:
+        print(f"Failed to start stream server: {e}")
+        return
 
     global output_path
     print("Initializing camera...")
@@ -397,6 +402,8 @@ def main():
         print("Cleaning up...")
         picam2.stop()
         out.release()
+        # Give the server thread a moment to clean up
+        time.sleep(0.5)
         print("Done!")
 
 if __name__ == "__main__":
