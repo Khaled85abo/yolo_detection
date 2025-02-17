@@ -305,7 +305,7 @@ def main():
             
             # Now try with the actual output path
             output_avi = output_path.rsplit('.', 1)[0] + '.mp4'
-            out = cv2.VideoWriter(output_avi, fourcc, custom_fps, (roi_width, full_height))
+            out = cv2.VideoWriter(output_avi, fourcc, custom_fps, (target_width, target_height))
             
             if out.isOpened():
                 output_path = output_avi
