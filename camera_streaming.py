@@ -383,7 +383,8 @@ def main():
             
             # Process frame
             process_start = time.time()
-            tracked_objects, orientations, roi_bounds = process_frame(frame, model, tracker)
+            # tracked_objects, orientations, roi_bounds = process_frame(frame, model, tracker)
+            tracked_objects, orientations, roi_bounds = process_frame(cropped_frame, model, tracker)
             process_end = time.time()
             
             # Print summary
@@ -392,15 +393,17 @@ def main():
             
             # Draw results
             draw_start = time.time()
-            frame = draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds)
+            # frame = draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds)
+            frame = draw_boxes_and_orientations(cropped_frame, tracked_objects, orientations, roi_bounds)
             draw_end = time.time()
             
             server.update_frame('camera1', frame)
             
             # Write original frame to video file
             out_write_start = time.time()
-            out.write(frame)
-            out_roi.write(cropped_frame)
+            # out.write(frame)
+            # out_roi.write(cropped_frame)
+            out_roi.write(frame)
             out_write_end = time.time()
             
             loop_end = time.time()
