@@ -35,8 +35,8 @@ def main():
 
     print("Configuring camera settings...")
     full_width, full_height = 640, 480
-    ROI_start = 0.40
-    ROI_end = 0.60
+    ROI_start = 0.10
+    ROI_end = 0.90
     
     # Ensure ROI width is even
     roi_width = int(full_width * (ROI_end - ROI_start))
