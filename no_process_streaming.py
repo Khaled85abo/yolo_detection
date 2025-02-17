@@ -82,10 +82,10 @@ def main():
             # Crop frame to ROI
             roi_x_start = int(full_width * ROI_start)
             roi_x_end = int(full_width * ROI_end)
-            frame = frame[:, roi_x_start:roi_x_end]
+            # frame = frame[:, roi_x_start:roi_x_end]
             
             # Resize frame to 640x480
-            # frame = cv2.resize(frame, (640, 480))
+            frame = cv2.resize(frame, (640, 480))
             
             # Add dimension check
             current_height, current_width = frame.shape[:2]
