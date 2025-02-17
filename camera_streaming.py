@@ -352,23 +352,44 @@ def main():
             color_conv_start = time.time()
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             color_conv_end = time.time()
-            
             # Crop frame to ROI
             roi_x_start = int(full_width * ROI_start)
             roi_x_end = int(full_width * ROI_end)
             
             # First, maintain original aspect ratio by keeping the full height
-            frame = frame[:, roi_x_start:roi_x_end]
+            cropped_frame = frame[:, roi_x_start:roi_x_end]
+
+                        # Calculate padding to maintain aspect ratio
+            target_width = 640
+            target_height = 480
             
-            # Simple resize to target dimensions without any padding
-            # This maintains the natural look of the ROI section
-            frame = cv2.resize(frame, (roi_width, full_height))
+            # Resize maintaining aspect ratio
+            aspect_ratio = cropped_frame.shape[1] / cropped_frame.shape[0]
+            if aspect_ratio > (target_width / target_height):
+                new_width = target_width
+                new_height = int(target_width / aspect_ratio)
+                vertical_padding = (target_height - new_height) // 2
+                frame = cv2.resize(cropped_frame, (new_width, new_height))
+                # Add padding
+                frame = cv2.copyMakeBorder(frame, vertical_padding, vertical_padding, 
+                                         0, 0, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+            else:
+                new_height = target_height
+                new_width = int(target_height * aspect_ratio)
+                horizontal_padding = (target_width - new_width) // 2
+                frame = cv2.resize(cropped_frame, (new_width, new_height))
+                # Add padding
+                frame = cv2.copyMakeBorder(frame, 0, 0, horizontal_padding, 
+                                         horizontal_padding, cv2.BORDER_CONSTANT, value=[0, 0, 0])
             
             # Add dimension check
             current_height, current_width = frame.shape[:2]
             if current_width != roi_width or current_height != full_height:
                 print(f"Warning: Frame dimensions ({current_width}x{current_height}) "
                       f"don't match expected dimensions ({roi_width}x{full_height})")
+            
+            
+
             
             # Process frame
             process_start = time.time()
