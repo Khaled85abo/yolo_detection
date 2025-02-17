@@ -231,14 +231,14 @@ def draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds
                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, color, 2)
 
         # Draw orientation line
-        center_x = int((x1 + x2) / 2)
-        center_y = int((y1 + y2) / 2)
-        cv2.circle(frame, (center_x, center_y), 4, color, -1)
+        # center_x = int((x1 + x2) / 2)
+        # center_y = int((y1 + y2) / 2)
+        # cv2.circle(frame, (center_x, center_y), 4, color, -1)
 
-        line_length = min(x2 - x1, y2 - y1) // 2
-        end_x = center_x + int(line_length * np.cos(np.radians(angle)))
-        end_y = center_y + int(line_length * np.sin(np.radians(angle)))
-        cv2.line(frame, (center_x, center_y), (end_x, end_y), color, 2)
+        # line_length = min(x2 - x1, y2 - y1) // 2
+        # end_x = center_x + int(line_length * np.cos(np.radians(angle)))
+        # end_y = center_y + int(line_length * np.sin(np.radians(angle)))
+        # cv2.line(frame, (center_x, center_y), (end_x, end_y), color, 2)
 
     return frame
 def main():
