@@ -70,7 +70,7 @@ import cv2
 import os
 from datetime import datetime
 import threading
-class VideoOutputHandler:
+class OutputVideo:
     _instance = None
     _lock = threading.Lock()
     

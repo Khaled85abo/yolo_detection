@@ -250,6 +250,8 @@ def main():
     # Calculate padding to maintain aspect ratio
     target_width = 640
     target_height = 480
+    custom_fps = 10
+
 
     # Ensure ROI width is even
     roi_width = int(target_width * (ROI_end - ROI_start))
@@ -283,48 +285,51 @@ def main():
 
     global output_path
 
-    custom_fps = 10
-
-    # Create output directory if it doesn't exist
-    output_dir = os.path.dirname(output_path)
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-        print(f"Created output directory: {output_dir}")
-
-    # Try with a simple output path first
-    test_output = 'test_output.mp4'
-    print(f"Testing VideoWriter with simple path: {test_output}")
-    
     try:
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        test_out = cv2.VideoWriter(test_output, fourcc, custom_fps, (target_width, target_height))
-        
-        if test_out.isOpened():
-            print("VideoWriter opened successfully with test path")
-            test_out.release()
-            
-            # Now try with the actual output path
-            output_avi = output_path.rsplit('.', 1)[0] + '.mp4'
-            output_avi_roi = output_path.rsplit('.', 1)[0] + '_roi.mp4'
-            out = cv2.VideoWriter(output_avi, fourcc, custom_fps, (target_width, target_height))
-            out_roi = cv2.VideoWriter(output_avi_roi, fourcc, custom_fps, (roi_width, target_height))
-            
-            
-            if out.isOpened():
-                output_path = output_avi
-                print(f"Successfully initialized VideoWriter: {output_path}")
-            else:
-                raise Exception("Failed to open VideoWriter with actual path")
-        else:
-            raise Exception("Failed to open VideoWriter with test path")
-            
+        from output_video import OutputVideo
+        out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, target_width=roi_width, target_height=target_height)
+        out_cls.create_writer(name='camera1', subfolder='pi')
+
     except Exception as e:
-        print(f"Failed to initialize VideoWriter: {str(e)}")
-        print("Trying with absolute path...")
+        print(f"Failed to initialize OutputVideo: {str(e)}")
+        return
+
+
+
+    # # Try with a simple output path first
+    # test_output = 'test_output.mp4'
+    # print(f"Testing VideoWriter with simple path: {test_output}")
+    
+    # try:
+    #     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+    #     test_out = cv2.VideoWriter(test_output, fourcc, custom_fps, (target_width, target_height))
+        
+    #     if test_out.isOpened():
+    #         print("VideoWriter opened successfully with test path")
+    #         test_out.release()
+            
+    #         # Now try with the actual output path
+    #         output_avi = output_path.rsplit('.', 1)[0] + '.mp4'
+    #         output_avi_roi = output_path.rsplit('.', 1)[0] + '_roi.mp4'
+    #         out = cv2.VideoWriter(output_avi, fourcc, custom_fps, (target_width, target_height))
+    #         out_roi = cv2.VideoWriter(output_avi_roi, fourcc, custom_fps, (roi_width, target_height))
+            
+            
+    #         if out.isOpened():
+    #             output_path = output_avi
+    #             print(f"Successfully initialized VideoWriter: {output_path}")
+    #         else:
+    #             raise Exception("Failed to open VideoWriter with actual path")
+    #     else:
+    #         raise Exception("Failed to open VideoWriter with test path")
+            
+    # except Exception as e:
+    #     print(f"Failed to initialize VideoWriter: {str(e)}")
+    #     print("Trying with absolute path...")
         
 
 
-    print(f"Final output path: {output_path}")
+    # print(f"Final output path: {output_path}")
 
 
 
@@ -403,7 +408,7 @@ def main():
             out_write_start = time.time()
             # out.write(frame)
             # out_roi.write(cropped_frame)
-            out_roi.write(frame)
+            out_cls.write_frame(frame, writer_key='camera1')
             out_write_end = time.time()
             
             loop_end = time.time()
@@ -422,7 +427,7 @@ def main():
     finally:
         print("Cleaning up...")
         picam2.stop()
-        out.release()
+        out_cls.release(writer_key='camera1')
         # Give the server thread a moment to clean up
         time.sleep(0.5)
         print("Done!")
