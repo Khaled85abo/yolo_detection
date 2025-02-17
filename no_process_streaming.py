@@ -82,10 +82,30 @@ def main():
             # Crop frame to ROI
             roi_x_start = int(full_width * ROI_start)
             roi_x_end = int(full_width * ROI_end)
-            # frame = frame[:, roi_x_start:roi_x_end]
+            cropped_frame = frame[:, roi_x_start:roi_x_end]
             
-            # Resize frame to 640x480
-            frame = cv2.resize(frame, (640, 480))
+            # Calculate padding to maintain aspect ratio
+            target_width = 640
+            target_height = 480
+            
+            # Resize maintaining aspect ratio
+            aspect_ratio = cropped_frame.shape[1] / cropped_frame.shape[0]
+            if aspect_ratio > (target_width / target_height):
+                new_width = target_width
+                new_height = int(target_width / aspect_ratio)
+                vertical_padding = (target_height - new_height) // 2
+                frame = cv2.resize(cropped_frame, (new_width, new_height))
+                # Add padding
+                frame = cv2.copyMakeBorder(frame, vertical_padding, vertical_padding, 
+                                         0, 0, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+            else:
+                new_height = target_height
+                new_width = int(target_height * aspect_ratio)
+                horizontal_padding = (target_width - new_width) // 2
+                frame = cv2.resize(cropped_frame, (new_width, new_height))
+                # Add padding
+                frame = cv2.copyMakeBorder(frame, 0, 0, horizontal_padding, 
+                                         horizontal_padding, cv2.BORDER_CONSTANT, value=[0, 0, 0])
             
             # Add dimension check
             current_height, current_width = frame.shape[:2]
