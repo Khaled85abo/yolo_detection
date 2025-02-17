@@ -50,7 +50,7 @@ def main():
         main={"size": (full_width, full_height), "format": "RGB888"},
         controls={"FrameDurationLimits": (33333, 33333)}  # ~30fps
     )
-    picam2.configure(config)
+    # picam2.configure(config)
 
     picam2.set_controls({"AeEnable": True})
 
