@@ -260,6 +260,10 @@ def main():
     print("Configuring camera settings...")
     full_width, full_height = 640, 480
     
+    # Calculate padding to maintain aspect ratio
+    target_width = 640
+    target_height = 480
+    
     # Ensure ROI width is even
     roi_width = int(full_width * (ROI_end - ROI_start))
     if roi_width % 2 != 0:
@@ -293,7 +297,7 @@ def main():
     
     try:
         fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
-        test_out = cv2.VideoWriter(test_output, fourcc, custom_fps, (roi_width, full_height))
+        test_out = cv2.VideoWriter(test_output, fourcc, custom_fps, (target_width, target_height))
         
         if test_out.isOpened():
             print("VideoWriter opened successfully with test path")
@@ -359,9 +363,6 @@ def main():
             # First, maintain original aspect ratio by keeping the full height
             cropped_frame = frame[:, roi_x_start:roi_x_end]
 
-                        # Calculate padding to maintain aspect ratio
-            target_width = 640
-            target_height = 480
             
             # Resize maintaining aspect ratio
             aspect_ratio = cropped_frame.shape[1] / cropped_frame.shape[0]
