@@ -34,21 +34,23 @@ def main():
     picam2 = Picamera2()
 
     print("Configuring camera settings...")
-    # full_width, full_height = 640, 480
+    full_width, full_height = 640, 480
+    ROI_start = 0.40
+    ROI_end = 0.60
     
     # Ensure ROI width is even
-    # roi_width = int(full_width * (ROI_end - ROI_start))
-    # if roi_width % 2 != 0:
-    #     roi_width += 1  # Make it even
+    roi_width = int(full_width * (ROI_end - ROI_start))
+    if roi_width % 2 != 0:
+        roi_width += 1  # Make it even
     
-    # print(f"Full dimensions: {full_width}x{full_height}")
-    # print(f"ROI width: {roi_width}")
+    print(f"Full dimensions: {full_width}x{full_height}")
+    print(f"ROI width: {roi_width}")
     
-    # config = picam2.create_video_configuration(
-    #     main={"size": (full_width, full_height), "format": "RGB888"},
-    #     controls={"FrameDurationLimits": (33333, 33333)}  # ~30fps
-    # )
-    # picam2.configure(config)
+    config = picam2.create_video_configuration(
+        main={"size": (full_width, full_height), "format": "RGB888"},
+        controls={"FrameDurationLimits": (33333, 33333)}  # ~30fps
+    )
+    picam2.configure(config)
 
     picam2.set_controls({"AeEnable": True})
 
@@ -78,32 +80,21 @@ def main():
             color_conv_end = time.time()
             
             # Crop frame to ROI
-            # roi_x_start = int(full_width * ROI_start)
-            # roi_x_end = int(full_width * ROI_end)
-            # frame = frame[:, roi_x_start:roi_x_end]
+            roi_x_start = int(full_width * ROI_start)
+            roi_x_end = int(full_width * ROI_end)
+            frame = frame[:, roi_x_start:roi_x_end]
             
             # Resize frame to 640x480
-            # frame = cv2.resize(frame, (640, 480))
+            frame = cv2.resize(frame, (640, 480))
             
             # Add dimension check
-            # current_height, current_width = frame.shape[:2]
-            # if current_width != roi_width or current_height != full_height:
-            #     print(f"Warning: Frame dimensions ({current_width}x{current_height}) "
-            #           f"don't match expected dimensions ({roi_width}x{full_height})")
+            current_height, current_width = frame.shape[:2]
+            if current_width != roi_width or current_height != full_height:
+                print(f"Warning: Frame dimensions ({current_width}x{current_height}) "
+                      f"don't match expected dimensions ({roi_width}x{full_height})")
             
-            # Process frame
-            # process_start = time.time()
-            # tracked_objects, orientations, roi_bounds = process_frame(frame, model, tracker)
-            # process_end = time.time()
             
-            # Print summary
-            # objects_in_roi = len(tracked_objects)
-            # print(f"Summary: {objects_in_roi} tracked objects")
-            
-            # Draw results
-            # draw_start = time.time()
-            # frame = draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds)
-            # draw_end = time.time()
+
             
             server.update_frame('camera2', frame)
             
