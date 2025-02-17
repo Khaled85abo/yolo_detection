@@ -36,7 +36,7 @@ tracker = DeepSort(
     nn_budget=100,           # Maximum size of the appearance descriptors gallery
     embedder="mobilenet",    # Feature extractor
     half=True,              # Use half precision for better speed
-    bgr=True,
+    bgr=False,
     embedder_gpu=True
 )
 
