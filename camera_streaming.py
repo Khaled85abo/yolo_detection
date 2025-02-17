@@ -292,11 +292,11 @@ def main():
         print(f"Created output directory: {output_dir}")
 
     # Try with a simple output path first
-    test_output = 'test_output.avi'
+    test_output = 'test_output.mp4'
     print(f"Testing VideoWriter with simple path: {test_output}")
     
     try:
-        fourcc = cv2.VideoWriter_fourcc('M', 'J', 'P', 'G')
+        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
         test_out = cv2.VideoWriter(test_output, fourcc, custom_fps, (target_width, target_height))
         
         if test_out.isOpened():
@@ -304,7 +304,7 @@ def main():
             test_out.release()
             
             # Now try with the actual output path
-            output_avi = output_path.rsplit('.', 1)[0] + '.avi'
+            output_avi = output_path.rsplit('.', 1)[0] + '.mp4'
             out = cv2.VideoWriter(output_avi, fourcc, custom_fps, (roi_width, full_height))
             
             if out.isOpened():
