@@ -37,6 +37,8 @@ from typing import Dict, Optional
 
 class VideoStreamTrack(MediaStreamTrack):
     kind = "video"
+    _instance = None
+    _lock = threading.Lock()
 
     def __init__(self, camera_id: str):
         super().__init__()
@@ -63,19 +65,32 @@ class VideoStreamTrack(MediaStreamTrack):
         return frame
 
 class WebRTCServer:
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+                cls._instance._initialized = False
+            return cls._instance
+
     def __init__(self):
-        self.app = web.Application()
-        self.app.router.add_get("/", self.index)
-        self.app.router.add_get("/client.js", self.javascript)
-        self.app.router.add_post("/offer", self.offer)
-        
-        self.pcs: Dict[str, RTCPeerConnection] = {}
-        self.relay = MediaRelay()
-        self.cameras: Dict[str, VideoStreamTrack] = {}
-        
-        # Configure logging
-        logging.basicConfig(level=logging.INFO)
-        self.logger = logging.getLogger("WebRTCServer")
+        if not self._initialized:
+            self.app = web.Application()
+            self.app.router.add_get("/", self.index)
+            self.app.router.add_get("/client.js", self.javascript)
+            self.app.router.add_post("/offer", self.offer)
+            
+            self.pcs: Dict[str, RTCPeerConnection] = {}
+            self.relay = MediaRelay()
+            self.cameras: Dict[str, VideoStreamTrack] = {}
+            
+            # Configure logging
+            logging.basicConfig(level=logging.INFO)
+            self.logger = logging.getLogger("WebRTCServer")
+            
+            self._initialized = True
 
     async def index(self, request):
         with open("index.html", "r") as f:

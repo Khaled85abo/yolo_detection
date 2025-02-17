@@ -49,20 +49,34 @@ from typing import Dict, Optional
 import os
 
 class RTSPServer:
+    _instance = None
+    _lock = threading.Lock()
+
+    def __new__(cls):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+                # Initialize the singleton instance
+                cls._instance._initialized = False
+            return cls._instance
+
     def __init__(self):
-        self.logger = logging.getLogger("RTSPServer")
-        self.logger.setLevel(logging.INFO)
-        
-        self.cameras: Dict[str, Dict] = {}
-        self.running = False
-        self.mediamtx_process: Optional[subprocess.Popen] = None
-        
-        # Default RTSP/RTMP ports
-        self.rtsp_port = 8554
-        self.rtmp_port = 1935
-        
-        # Configure MediaMTX
-        self._create_mediamtx_config()
+        # Only initialize once
+        if not self._initialized:
+            self.logger = logging.getLogger("RTSPServer")
+            self.logger.setLevel(logging.INFO)
+            
+            self.cameras: Dict[str, Dict] = {}
+            self.running = False
+            self.mediamtx_process: Optional[subprocess.Popen] = None
+            
+            # Default RTSP/RTMP ports
+            self.rtsp_port = 8554
+            self.rtmp_port = 1935
+            
+            # Configure MediaMTX
+            self._create_mediamtx_config()
+            self._initialized = True
 
     def _create_mediamtx_config(self):
         """Create MediaMTX configuration file"""
