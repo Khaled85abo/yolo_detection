@@ -354,7 +354,7 @@ def main():
             
             # Color conversion
             color_conv_start = time.time()
-            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            # frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             color_conv_end = time.time()
             # Crop frame to ROI
             roi_x_start = int(full_width * ROI_start)
