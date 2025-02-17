@@ -65,16 +65,17 @@ class StreamServer:
         # Skip initialization if already done
         pass
     
-    def add_camera(self, camera_id):
+    def add_camera(self, camera_id, frame_size=(640, 480)):
         """Add a new camera feed"""
         self.cameras[camera_id] = None
         self.frame_locks[camera_id] = threading.Lock()
-    
+        self.frame_size = frame_size
+
     def update_frame(self, camera_id, frame):
         """Update the frame for a specific camera"""
         with self.frame_locks[camera_id]:
             # Resize frame for streaming to reduce bandwidth
-            stream_frame = cv2.resize(frame, (640, 480))
+            stream_frame = cv2.resize(frame, self.frame_size)
             self.cameras[camera_id] = stream_frame.copy()
     
     def generate_frames(self, camera_id):
@@ -105,7 +106,7 @@ class StreamServer:
         camera_feeds = ""
         for camera_id in self.cameras.keys():
             camera_feeds += f'<div><h2>Camera {camera_id}</h2>'
-            camera_feeds += f'<img src="/video_feed/{camera_id}" width="640" height="480" /></div>'
+            camera_feeds += f'<img src="/video_feed/{camera_id}" width="{self.frame_size[0]}" height="{self.frame_size[1]}" /></div>'
         
         return f"""
         <html>

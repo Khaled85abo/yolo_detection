@@ -242,38 +242,25 @@ def draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds
 
     return frame
 def main():
-    try:
-        from stream_server_flask import StreamServer
-        print("Starting stream server...")
-        server = StreamServer()
-        server.add_camera('camera1')
-        server_thread = server.run_threaded()
-        print("Stream server started successfully")
-    except Exception as e:
-        print(f"Failed to start stream server: {e}")
-        return
-
-    global output_path
     print("Initializing camera...")
     picam2 = Picamera2()
 
     print("Configuring camera settings...")
-    full_width, full_height = 640, 480
     
     # Calculate padding to maintain aspect ratio
     target_width = 640
     target_height = 480
-    
+
     # Ensure ROI width is even
-    roi_width = int(full_width * (ROI_end - ROI_start))
+    roi_width = int(target_width * (ROI_end - ROI_start))
     if roi_width % 2 != 0:
         roi_width += 1  # Make it even
     
-    print(f"Full dimensions: {full_width}x{full_height}")
+    print(f"Full dimensions: {target_width}x{target_height}")
     print(f"ROI width: {roi_width}")
     
     config = picam2.create_video_configuration(
-        main={"size": (full_width, full_height), "format": "RGB888"},
+        main={"size": (target_width, target_height), "format": "RGB888"},
         controls={"FrameDurationLimits": (33333, 33333)}  # ~30fps
     )
     picam2.configure(config)
@@ -282,6 +269,19 @@ def main():
 
     print("Starting camera...")
     picam2.start()
+
+    try:
+        from stream_server_flask import StreamServer
+        print("Starting stream server...")
+        server = StreamServer()
+        server.add_camera('camera1', frame_size=(roi_width, target_height))
+        server_thread = server.run_threaded()
+        print("Stream server started successfully")
+    except Exception as e:
+        print(f"Failed to start stream server: {e}")
+        return
+
+    global output_path
 
     custom_fps = 10
 
@@ -346,8 +346,8 @@ def main():
             # frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             color_conv_end = time.time()
             # Crop frame to ROI
-            roi_x_start = int(full_width * ROI_start)
-            roi_x_end = int(full_width * ROI_end)
+            roi_x_start = int(target_width * ROI_start)
+            roi_x_end = int(target_width * ROI_end)
             
             # First, maintain original aspect ratio by keeping the full height
             cropped_frame = frame[:, roi_x_start:roi_x_end]
@@ -374,9 +374,9 @@ def main():
             
             # Add dimension check
             current_height, current_width = frame.shape[:2]
-            if current_width != roi_width or current_height != full_height:
+            if current_width != roi_width or current_height != target_height:
                 print(f"Warning: Frame dimensions ({current_width}x{current_height}) "
-                      f"don't match expected dimensions ({roi_width}x{full_height})")
+                      f"don't match expected dimensions ({roi_width}x{target_height})")
             
             
 
