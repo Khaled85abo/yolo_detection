@@ -24,7 +24,7 @@ aspect_ratio_threshold = 0.60
 
 # Initialize YOLO model
 model = YOLO('/home/rise/enter/train_yolo11n/weights/best_yolo11n.pt')
-output_path = 'videos_output/yolo11n/pi/output_ori_1.mp4'
+output_path = 'videos_output'
 # Initialize DeepSORT tracker
 # Initialize DeepSORT tracker
 tracker = DeepSort(
