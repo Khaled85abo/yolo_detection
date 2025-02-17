@@ -305,7 +305,10 @@ def main():
             
             # Now try with the actual output path
             output_avi = output_path.rsplit('.', 1)[0] + '.mp4'
+            output_avi_roi = output_path.rsplit('.', 1)[0] + '_roi.mp4'
             out = cv2.VideoWriter(output_avi, fourcc, custom_fps, (target_width, target_height))
+            out_roi = cv2.VideoWriter(output_avi_roi, fourcc, custom_fps, (roi_width, target_height))
+            
             
             if out.isOpened():
                 output_path = output_avi
@@ -319,21 +322,7 @@ def main():
         print(f"Failed to initialize VideoWriter: {str(e)}")
         print("Trying with absolute path...")
         
-        try:
-            # Try with absolute path
-            abs_path = os.path.abspath(output_path.rsplit('.', 1)[0] + '.avi')
-            out = cv2.VideoWriter(abs_path, fourcc, custom_fps, (roi_width, full_height))
-            
-            if out.isOpened():
-                output_path = abs_path
-                print(f"Successfully initialized VideoWriter with absolute path: {output_path}")
-            else:
-                raise Exception("Failed to open VideoWriter with absolute path")
-                
-        except Exception as e:
-            print(f"Failed to initialize VideoWriter with absolute path: {str(e)}")
-            print("Error: Could not initialize VideoWriter!")
-            return
+
 
     print(f"Final output path: {output_path}")
 
@@ -411,6 +400,7 @@ def main():
             # Write original frame to video file
             out_write_start = time.time()
             out.write(frame)
+            out_roi.write(cropped_frame)
             out_write_end = time.time()
             
             loop_end = time.time()
