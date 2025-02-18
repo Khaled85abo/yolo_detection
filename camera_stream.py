@@ -16,8 +16,8 @@ import logging
 orientation_memory = defaultdict(lambda: {"orientation": "unknown", "angle": 0, "aspect_ratio": 0})
 
 # ROI parameters
-ROI_start = 0.30
-ROI_end = 0.65
+ROI_start = 0.40
+ROI_end = 0.60
 
 # aspect ratio
 aspect_ratio_threshold = 0.60
