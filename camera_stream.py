@@ -16,8 +16,8 @@ import logging
 orientation_memory = defaultdict(lambda: {"orientation": "unknown", "angle": 0, "aspect_ratio": 0})
 
 # ROI parameters
-ROI_start = 0.40
-ROI_end = 0.60
+ROI_start = 0.30
+ROI_end = 0.65
 
 # aspect ratio
 aspect_ratio_threshold = 0.60
@@ -347,9 +347,9 @@ def main():
             capture_end = time.time()
             
             # Color conversion
-            color_conv_start = time.time()
+            # color_conv_start = time.time()
             # frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            color_conv_end = time.time()
+            # color_conv_end = time.time()
             # Crop frame to ROI
             roi_x_start = int(target_width * ROI_start)
             roi_x_end = int(target_width * ROI_end)
@@ -416,7 +416,6 @@ def main():
             print(
                 f"[main loop] Frame {frame_count} total: {(loop_end - loop_start):.3f}s | "
                 f"capture: {(capture_end - capture_start):.3f}s | "
-                f"color_conv: {(color_conv_end - color_conv_start):.3f}s | "
                 f"process_frame: {(process_end - process_start):.3f}s | "
                 f"draw: {(draw_end - draw_start):.3f}s | "
                 f"write: {(out_write_end - out_write_start):.3f}s"
