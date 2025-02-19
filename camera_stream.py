@@ -21,7 +21,7 @@ x_ROI_end = 0.60
 
 # ROI parameters for y axis, percentage of height
 y_ROI_start = 0
-y_ROI_end = 100
+y_ROI_end = 1
 
 # aspect ratio for plank orientation validation
 aspect_ratio_threshold = 0.60
