@@ -15,11 +15,15 @@ import logging
 # Add this as a global variable
 orientation_memory = defaultdict(lambda: {"orientation": "unknown", "angle": 0, "aspect_ratio": 0})
 
-# ROI parameters
-ROI_start = 0.40
-ROI_end = 0.60
+# ROI parameters for x axis, percentage of width
+x_ROI_start = 0.40
+x_ROI_end = 0.60
 
-# aspect ratio
+# ROI parameters for y axis, percentage of height
+y_ROI_start = 0
+y_ROI_end = 100
+
+# aspect ratio for plank orientation validation
 aspect_ratio_threshold = 0.60
 
 # Initialize YOLO model
@@ -254,9 +258,19 @@ def main():
 
 
     # Ensure ROI width is even
-    roi_width = int(target_width * (ROI_end - ROI_start))
+    roi_width = int(target_width * (x_ROI_end - x_ROI_start))
     if roi_width % 2 != 0:
         roi_width += 1  # Make it even
+
+    # Ensure ROI height is even
+    roi_height = int(target_height * (y_ROI_end - y_ROI_start))
+    if roi_height % 2 != 0:
+        roi_height += 1  # Make it even
+
+
+    print(f"Full dimensions: {target_width}x{target_height}")
+    print(f"ROI dimensions: {roi_width}x{roi_height}")
+
     
     print(f"Full dimensions: {target_width}x{target_height}")
     print(f"ROI width: {roi_width}")
@@ -276,7 +290,7 @@ def main():
         from stream_server_flask import StreamServer
         print("Starting stream server...")
         server = StreamServer()
-        server.add_camera('camera1', frame_size=(roi_width, target_height))
+        server.add_camera('camera1', frame_size=(roi_width, roi_height))
         server_thread = server.run_threaded()
         print("Stream server started successfully")
     except Exception as e:
@@ -287,7 +301,8 @@ def main():
 
     try:
         from output_video import OutputVideo
-        out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, target_width=roi_width, target_height=target_height)
+        # out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, target_width=roi_width, target_height=target_height)
+        out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, target_width=roi_width, target_height=roi_height)
         out_cls.create_writer(name='camera1', subfolder='pi')
 
     except Exception as e:
@@ -350,12 +365,19 @@ def main():
             # color_conv_start = time.time()
             # frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             # color_conv_end = time.time()
+
+
             # Crop frame to ROI
-            roi_x_start = int(target_width * ROI_start)
-            roi_x_end = int(target_width * ROI_end)
+            roi_x_start = int(target_width * x_ROI_start)
+            roi_x_end = int(target_width * x_ROI_end)
+            roi_y_start = int(target_height * y_ROI_start)
+            roi_y_end = int(target_height * y_ROI_end)
+
+
+
             
             # First, maintain original aspect ratio by keeping the full height
-            cropped_frame = frame[:, roi_x_start:roi_x_end]
+            cropped_frame = frame[roi_y_start:roi_y_end, roi_x_start:roi_x_end]
 
             
             # Resize maintaining aspect ratio
@@ -399,16 +421,16 @@ def main():
             # Draw results
             draw_start = time.time()
             # frame = draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds)
-            frame = draw_boxes_and_orientations(cropped_frame, tracked_objects, orientations, roi_bounds)
+            yolo_frame = draw_boxes_and_orientations(cropped_frame, tracked_objects, orientations, roi_bounds)
             draw_end = time.time()
             
-            server.update_frame('camera1', frame)
+            server.update_frame('camera1', yolo_frame)
             
             # Write original frame to video file
             out_write_start = time.time()
             # out.write(frame)
             # out_roi.write(cropped_frame)
-            out_cls.write_frame(frame, writer_key='camera1')
+            out_cls.write_frame(yolo_frame, writer_key='camera1')
             out_write_end = time.time()
             
             loop_end = time.time()
