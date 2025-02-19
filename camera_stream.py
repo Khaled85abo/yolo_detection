@@ -377,30 +377,30 @@ def main():
             cropped_frame = frame[roi_y_start:roi_y_end, roi_x_start:roi_x_end]
 
             
-            # Resize maintaining aspect ratio
-            aspect_ratio = cropped_frame.shape[1] / cropped_frame.shape[0]
-            if aspect_ratio > (pi_cam_config_width / pi_cam_config_height):
-                new_width = pi_cam_config_width
-                new_height = int(pi_cam_config_width / aspect_ratio)
-                vertical_padding = (pi_cam_config_height - new_height) // 2
-                frame = cv2.resize(cropped_frame, (new_width, new_height))
-                # Add padding
-                frame = cv2.copyMakeBorder(frame, vertical_padding, vertical_padding, 
-                                         0, 0, cv2.BORDER_CONSTANT, value=[0, 0, 0])
-            else:
-                new_height = pi_cam_config_height
-                new_width = int(pi_cam_config_height * aspect_ratio)
-                horizontal_padding = (pi_cam_config_width - new_width) // 2
-                frame = cv2.resize(cropped_frame, (new_width, new_height))
-                # Add padding
-                frame = cv2.copyMakeBorder(frame, 0, 0, horizontal_padding, 
-                                         horizontal_padding, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+            # # Resize maintaining aspect ratio
+            # aspect_ratio = cropped_frame.shape[1] / cropped_frame.shape[0]
+            # if aspect_ratio > (pi_cam_config_width / pi_cam_config_height):
+            #     new_width = pi_cam_config_width
+            #     new_height = int(pi_cam_config_width / aspect_ratio)
+            #     vertical_padding = (pi_cam_config_height - new_height) // 2
+            #     frame = cv2.resize(cropped_frame, (new_width, new_height))
+            #     # Add padding
+            #     frame = cv2.copyMakeBorder(frame, vertical_padding, vertical_padding, 
+            #                              0, 0, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+            # else:
+            #     new_height = pi_cam_config_height
+            #     new_width = int(pi_cam_config_height * aspect_ratio)
+            #     horizontal_padding = (pi_cam_config_width - new_width) // 2
+            #     frame = cv2.resize(cropped_frame, (new_width, new_height))
+            #     # Add padding
+            #     frame = cv2.copyMakeBorder(frame, 0, 0, horizontal_padding, 
+            #                              horizontal_padding, cv2.BORDER_CONSTANT, value=[0, 0, 0])
             
-            # Add dimension check
-            current_height, current_width = frame.shape[:2]
-            if current_width != roi_width or current_height != pi_cam_config_height:
-                print(f"Warning: Frame dimensions ({current_width}x{current_height}) "
-                      f"don't match expected dimensions ({roi_width}x{pi_cam_config_height})")
+            # # Add dimension check
+            # current_height, current_width = frame.shape[:2]
+            # if current_width != roi_width or current_height != pi_cam_config_height:
+            #     print(f"Warning: Frame dimensions ({current_width}x{current_height}) "
+            #           f"don't match expected dimensions ({roi_width}x{pi_cam_config_height})")
             
             
 
