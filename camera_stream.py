@@ -53,6 +53,9 @@ def process_frame(frame, model, tracker):
     global orientation_memory
     
     process_start = time.time()
+
+    height, width = frame.shape[:2]
+    print(f"YOLO input shape: {width}x{height}")
     
     # YOLO detection on ROI frame
     yolo_start = time.time()
