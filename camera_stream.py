@@ -301,8 +301,8 @@ def main():
 
     try:
         from output_video import OutputVideo
-        # out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, pi_cam_config_width=roi_width, pi_cam_config_height=pi_cam_config_height)
-        out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, pi_cam_config_width=roi_width, pi_cam_config_height=roi_height)
+        # out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, target_width=roi_width, target_height=roi_height)
+        out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, target_width=roi_width, target_height=roi_height)
         out_cls.create_writer(name='camera1', subfolder='pi')
 
     except Exception as e:
