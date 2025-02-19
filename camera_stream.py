@@ -15,15 +15,11 @@ import logging
 # Add this as a global variable
 orientation_memory = defaultdict(lambda: {"orientation": "unknown", "angle": 0, "aspect_ratio": 0})
 
-# ROI parameters for x axis, percentage of width
-x_ROI_start = 0.40
-x_ROI_end = 0.60
+# ROI parameters
+ROI_start = 0.40
+ROI_end = 0.60
 
-# ROI parameters for y axis, percentage of height
-y_ROI_start = 0.20
-y_ROI_end = 0.80
-
-# aspect ratio for plank orientation validation
+# aspect ratio
 aspect_ratio_threshold = 0.60
 
 # Initialize YOLO model
@@ -59,10 +55,7 @@ def process_frame(frame, model, tracker):
     
     # YOLO detection on ROI frame
     yolo_start = time.time()
-    # Force YOLO to maintain exact ROI dimensions
-    height, width = frame.shape[:2]
-    print(f"YOLO input shape: {width}x{height}")
-    results = model(frame, conf=0.5, imgsz=(width, height), augment=False)[0]
+    results = model(frame, conf=0.5)[0]
     yolo_end = time.time()
 
     print(f"\nDetected objects: {len(results.boxes)}")
@@ -171,8 +164,8 @@ def get_plank_orientation(points, width, height):
     """
     Determine plank orientation based on bounding box characteristics
     """
-    # Calculate aspect ratio for the bounding box
-    bounding_box_aspect_ratio = width / height if height != 0 else 0
+    # Calculate aspect ratio
+    aspect_ratio = width / height if height != 0 else 0
 
     # Calculate rotated rectangle for angle
     rect = cv2.minAreaRect(points)
@@ -187,7 +180,7 @@ def get_plank_orientation(points, width, height):
         angle -= 180
 
     # For vertical planks (correct orientation), aspect ratio should be < 1
-    if bounding_box_aspect_ratio < aspect_ratio_threshold:  # height is significantly larger than width
+    if aspect_ratio < aspect_ratio_threshold:  # height is significantly larger than width
         print("Orientation: correct")
         orientation = "correct"
     # elif aspect_ratio > 1.5:  # width is significantly larger than height
@@ -197,7 +190,7 @@ def get_plank_orientation(points, width, height):
         orientation = "incorrect"  # For cases where orientation is ambiguous
 
 
-    return orientation, angle, bounding_box_aspect_ratio
+    return orientation, angle, aspect_ratio
 
 def draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds):
     """
@@ -257,32 +250,22 @@ def main():
 
     print("Configuring camera settings...")
     
-    # set config dimensions from picam2, the original dimensions are 1920x1080
-    pi_cam_config_width = 640
-    pi_cam_config_height = 480
+    # Calculate padding to maintain aspect ratio
+    target_width = 640
+    target_height = 480
     custom_fps = 10
 
 
     # Ensure ROI width is even
-    roi_width = int(pi_cam_config_width * (x_ROI_end - x_ROI_start))
+    roi_width = int(target_width * (ROI_end - ROI_start))
     if roi_width % 2 != 0:
         roi_width += 1  # Make it even
-
-    # Ensure ROI height is even
-    roi_height = int(pi_cam_config_height * (y_ROI_end - y_ROI_start))
-    if roi_height % 2 != 0:
-        roi_height += 1  # Make it even
-
-
-    print(f"Full dimensions: {pi_cam_config_width}x{pi_cam_config_height}")
-    print(f"ROI dimensions: {roi_width}x{roi_height}")
-
     
-    print(f"Full dimensions: {pi_cam_config_width}x{pi_cam_config_height}")
+    print(f"Full dimensions: {target_width}x{target_height}")
     print(f"ROI width: {roi_width}")
     
     config = picam2.create_video_configuration(
-        main={"size": (pi_cam_config_width, pi_cam_config_height), "format": "RGB888"},
+        main={"size": (target_width, target_height), "format": "RGB888"},
         controls={"FrameDurationLimits": (33333, 33333)}  # ~30fps
     )
     picam2.configure(config)
@@ -296,7 +279,7 @@ def main():
         from stream_server_flask import StreamServer
         print("Starting stream server...")
         server = StreamServer()
-        server.add_camera('camera1', frame_size=(roi_width, roi_height))
+        server.add_camera('camera1', frame_size=(roi_width, target_height))
         server_thread = server.run_threaded()
         print("Stream server started successfully")
     except Exception as e:
@@ -307,8 +290,7 @@ def main():
 
     try:
         from output_video import OutputVideo
-        # out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, target_width=roi_width, target_height=roi_height)
-        out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, target_width=roi_width, target_height=roi_height)
+        out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, target_width=roi_width, target_height=target_height)
         out_cls.create_writer(name='camera1', subfolder='pi')
 
     except Exception as e:
@@ -323,7 +305,7 @@ def main():
     
     # try:
     #     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    #     test_out = cv2.VideoWriter(test_output, fourcc, custom_fps, (pi_cam_config_width, pi_cam_config_height))
+    #     test_out = cv2.VideoWriter(test_output, fourcc, custom_fps, (target_width, target_height))
         
     #     if test_out.isOpened():
     #         print("VideoWriter opened successfully with test path")
@@ -332,8 +314,8 @@ def main():
     #         # Now try with the actual output path
     #         output_avi = output_path.rsplit('.', 1)[0] + '.mp4'
     #         output_avi_roi = output_path.rsplit('.', 1)[0] + '_roi.mp4'
-    #         out = cv2.VideoWriter(output_avi, fourcc, custom_fps, (pi_cam_config_width, pi_cam_config_height))
-    #         out_roi = cv2.VideoWriter(output_avi_roi, fourcc, custom_fps, (roi_width, pi_cam_config_height))
+    #         out = cv2.VideoWriter(output_avi, fourcc, custom_fps, (target_width, target_height))
+    #         out_roi = cv2.VideoWriter(output_avi_roi, fourcc, custom_fps, (roi_width, target_height))
             
             
     #         if out.isOpened():
@@ -371,42 +353,38 @@ def main():
             # color_conv_start = time.time()
             # frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             # color_conv_end = time.time()
-
-
             # Crop frame to ROI
-            roi_x_start = int(pi_cam_config_width * x_ROI_start)
-            roi_x_end = int(pi_cam_config_width * x_ROI_end)
-            roi_y_start = int(pi_cam_config_height * y_ROI_start)
-            roi_y_end = int(pi_cam_config_height * y_ROI_end)
+            roi_x_start = int(target_width * ROI_start)
+            roi_x_end = int(target_width * ROI_end)
             
             # First, maintain original aspect ratio by keeping the full height
-            cropped_frame = frame[roi_y_start:roi_y_end, roi_x_start:roi_x_end]
+            cropped_frame = frame[:, roi_x_start:roi_x_end]
 
             
-            # # Resize maintaining aspect ratio
-            # aspect_ratio = cropped_frame.shape[1] / cropped_frame.shape[0]
-            # if aspect_ratio > (pi_cam_config_width / pi_cam_config_height):
-            #     new_width = pi_cam_config_width
-            #     new_height = int(pi_cam_config_width / aspect_ratio)
-            #     vertical_padding = (pi_cam_config_height - new_height) // 2
-            #     frame = cv2.resize(cropped_frame, (new_width, new_height))
-            #     # Add padding
-            #     frame = cv2.copyMakeBorder(frame, vertical_padding, vertical_padding, 
-            #                              0, 0, cv2.BORDER_CONSTANT, value=[0, 0, 0])
-            # else:
-            #     new_height = pi_cam_config_height
-            #     new_width = int(pi_cam_config_height * aspect_ratio)
-            #     horizontal_padding = (pi_cam_config_width - new_width) // 2
-            #     frame = cv2.resize(cropped_frame, (new_width, new_height))
-            #     # Add padding
-            #     frame = cv2.copyMakeBorder(frame, 0, 0, horizontal_padding, 
-            #                              horizontal_padding, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+            # Resize maintaining aspect ratio
+            aspect_ratio = cropped_frame.shape[1] / cropped_frame.shape[0]
+            if aspect_ratio > (target_width / target_height):
+                new_width = target_width
+                new_height = int(target_width / aspect_ratio)
+                vertical_padding = (target_height - new_height) // 2
+                frame = cv2.resize(cropped_frame, (new_width, new_height))
+                # Add padding
+                frame = cv2.copyMakeBorder(frame, vertical_padding, vertical_padding, 
+                                         0, 0, cv2.BORDER_CONSTANT, value=[0, 0, 0])
+            else:
+                new_height = target_height
+                new_width = int(target_height * aspect_ratio)
+                horizontal_padding = (target_width - new_width) // 2
+                frame = cv2.resize(cropped_frame, (new_width, new_height))
+                # Add padding
+                frame = cv2.copyMakeBorder(frame, 0, 0, horizontal_padding, 
+                                         horizontal_padding, cv2.BORDER_CONSTANT, value=[0, 0, 0])
             
-            # # Add dimension check
-            # current_height, current_width = frame.shape[:2]
-            # if current_width != roi_width or current_height != pi_cam_config_height:
-            #     print(f"Warning: Frame dimensions ({current_width}x{current_height}) "
-            #           f"don't match expected dimensions ({roi_width}x{pi_cam_config_height})")
+            # Add dimension check
+            current_height, current_width = frame.shape[:2]
+            if current_width != roi_width or current_height != target_height:
+                print(f"Warning: Frame dimensions ({current_width}x{current_height}) "
+                      f"don't match expected dimensions ({roi_width}x{target_height})")
             
             
 
@@ -424,16 +402,16 @@ def main():
             # Draw results
             draw_start = time.time()
             # frame = draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds)
-            yolo_frame = draw_boxes_and_orientations(cropped_frame, tracked_objects, orientations, roi_bounds)
+            frame = draw_boxes_and_orientations(cropped_frame, tracked_objects, orientations, roi_bounds)
             draw_end = time.time()
             
-            server.update_frame('camera1', yolo_frame)
+            server.update_frame('camera1', frame)
             
             # Write original frame to video file
             out_write_start = time.time()
             # out.write(frame)
             # out_roi.write(cropped_frame)
-            out_cls.write_frame(yolo_frame, writer_key='camera1')
+            out_cls.write_frame(frame, writer_key='camera1')
             out_write_end = time.time()
             
             loop_end = time.time()
