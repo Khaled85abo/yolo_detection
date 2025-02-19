@@ -40,13 +40,20 @@ tracker = DeepSort(
     embedder_gpu=True
 )
 
-
+# Add these to the global variables section
+STOP_THRESHOLD_FRAMES = 5  # Number of frames to consider as a stop
+MOVEMENT_THRESHOLD = 10    # Pixel distance to consider as movement
+stop_detection_memory = defaultdict(lambda: {
+    "positions": [],
+    "stop_frames": 0,
+    "is_stopped": False
+})
 
 def process_frame(frame, model, tracker):
     """
     Process each frame for object detection and orientation tracking
     """
-    global orientation_memory
+    global orientation_memory, stop_detection_memory
     
     process_start = time.time()
 
@@ -100,7 +107,7 @@ def process_frame(frame, model, tracker):
     tracked_objects = [t for t in tracked_objects if t.is_confirmed() and t.time_since_update <= 1]
     track_end = time.time()
 
-    # Orientation processing
+    # Orientation and stop detection processing
     orient_start = time.time()
     final_orientations = []
     for track in tracked_objects:
@@ -109,6 +116,34 @@ def process_frame(frame, model, tracker):
         x1, y1, x2, y2 = map(int, ltrb)
         width = x2 - x1
         height = y2 - y1
+        
+        # Calculate center point for stop detection
+        center_x = (x1 + x2) // 2
+        center_y = (y1 + y2) // 2
+        current_pos = (center_x, center_y)
+        
+        # Update stop detection memory
+        stop_memory = stop_detection_memory[track_id]
+        stop_memory["positions"].append(current_pos)
+        
+        # Keep only last STOP_THRESHOLD_FRAMES positions
+        if len(stop_memory["positions"]) > STOP_THRESHOLD_FRAMES:
+            stop_memory["positions"].pop(0)
+        
+        # Check if object has stopped
+        if len(stop_memory["positions"]) == STOP_THRESHOLD_FRAMES:
+            max_movement = max(
+                abs(current_pos[0] - pos[0]) + abs(current_pos[1] - pos[1])
+                for pos in stop_memory["positions"][:-1]
+            )
+            
+            if max_movement < MOVEMENT_THRESHOLD:
+                stop_memory["stop_frames"] += 1
+                if stop_memory["stop_frames"] >= STOP_THRESHOLD_FRAMES:
+                    stop_memory["is_stopped"] = True
+            else:
+                stop_memory["stop_frames"] = 0
+                stop_memory["is_stopped"] = False
 
         bbox = [x1, y1, width, height]
         points = detection_points.get(tuple(bbox), np.array([
@@ -131,7 +166,8 @@ def process_frame(frame, model, tracker):
             memory["angle"],
             memory["orientation"],
             memory["aspect_ratio"],
-            True  # Always in ROI since we're only processing ROI
+            True,  # Always in ROI since we're only processing ROI
+            stop_memory["is_stopped"]  # Add stop status to orientations
         ))
 
     # Clean up memory for tracks that are no longer active
@@ -139,6 +175,7 @@ def process_frame(frame, model, tracker):
     for track_id in list(orientation_memory.keys()):
         if track_id not in active_track_ids:
             del orientation_memory[track_id]
+            del stop_detection_memory[track_id]  # Clean up stop detection memory too
     orient_end = time.time()
     
     process_end = time.time()
@@ -198,7 +235,7 @@ def draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds
     """
     used_positions = {}
 
-    for track, (points, angle, orientation, aspect_ratio, _) in zip(tracked_objects, orientations):
+    for track, (points, angle, orientation, aspect_ratio, _, is_stopped) in zip(tracked_objects, orientations):
         if not track.is_confirmed():
             continue
 
@@ -227,6 +264,10 @@ def draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds
         used_positions[(x1, label_y)] = True
 
         label = f"ID: {track_id} | {orientation} | AR: {aspect_ratio:.2f}"
+        if is_stopped:
+            label += " | STOPPED"
+            # Add additional visual indicator for stopped objects
+            cv2.drawContours(frame, [box], 0, (255, 255, 0), 4)  # Thicker yellow border for stopped objects
         (text_width, text_height), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 2)
         cv2.rectangle(frame, (x1, label_y - text_height - 4),
                      (x1 + text_width, label_y + 4), (0, 0, 0), -1)
