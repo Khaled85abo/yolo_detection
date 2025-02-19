@@ -251,32 +251,32 @@ def main():
 
     print("Configuring camera settings...")
     
-    # Calculate padding to maintain aspect ratio
-    target_width = 640
-    target_height = 480
+    # set config dimensions from picam2, the original dimensions are 1920x1080
+    pi_cam_config_width = 640
+    pi_cam_config_height = 480
     custom_fps = 10
 
 
     # Ensure ROI width is even
-    roi_width = int(target_width * (x_ROI_end - x_ROI_start))
+    roi_width = int(pi_cam_config_width * (x_ROI_end - x_ROI_start))
     if roi_width % 2 != 0:
         roi_width += 1  # Make it even
 
     # Ensure ROI height is even
-    roi_height = int(target_height * (y_ROI_end - y_ROI_start))
+    roi_height = int(pi_cam_config_height * (y_ROI_end - y_ROI_start))
     if roi_height % 2 != 0:
         roi_height += 1  # Make it even
 
 
-    print(f"Full dimensions: {target_width}x{target_height}")
+    print(f"Full dimensions: {pi_cam_config_width}x{pi_cam_config_height}")
     print(f"ROI dimensions: {roi_width}x{roi_height}")
 
     
-    print(f"Full dimensions: {target_width}x{target_height}")
+    print(f"Full dimensions: {pi_cam_config_width}x{pi_cam_config_height}")
     print(f"ROI width: {roi_width}")
     
     config = picam2.create_video_configuration(
-        main={"size": (target_width, target_height), "format": "RGB888"},
+        main={"size": (pi_cam_config_width, pi_cam_config_height), "format": "RGB888"},
         controls={"FrameDurationLimits": (33333, 33333)}  # ~30fps
     )
     picam2.configure(config)
@@ -301,8 +301,8 @@ def main():
 
     try:
         from output_video import OutputVideo
-        # out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, target_width=roi_width, target_height=target_height)
-        out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, target_width=roi_width, target_height=roi_height)
+        # out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, pi_cam_config_width=roi_width, pi_cam_config_height=pi_cam_config_height)
+        out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, pi_cam_config_width=roi_width, pi_cam_config_height=roi_height)
         out_cls.create_writer(name='camera1', subfolder='pi')
 
     except Exception as e:
@@ -317,7 +317,7 @@ def main():
     
     # try:
     #     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    #     test_out = cv2.VideoWriter(test_output, fourcc, custom_fps, (target_width, target_height))
+    #     test_out = cv2.VideoWriter(test_output, fourcc, custom_fps, (pi_cam_config_width, pi_cam_config_height))
         
     #     if test_out.isOpened():
     #         print("VideoWriter opened successfully with test path")
@@ -326,8 +326,8 @@ def main():
     #         # Now try with the actual output path
     #         output_avi = output_path.rsplit('.', 1)[0] + '.mp4'
     #         output_avi_roi = output_path.rsplit('.', 1)[0] + '_roi.mp4'
-    #         out = cv2.VideoWriter(output_avi, fourcc, custom_fps, (target_width, target_height))
-    #         out_roi = cv2.VideoWriter(output_avi_roi, fourcc, custom_fps, (roi_width, target_height))
+    #         out = cv2.VideoWriter(output_avi, fourcc, custom_fps, (pi_cam_config_width, pi_cam_config_height))
+    #         out_roi = cv2.VideoWriter(output_avi_roi, fourcc, custom_fps, (roi_width, pi_cam_config_height))
             
             
     #         if out.isOpened():
@@ -368,13 +368,10 @@ def main():
 
 
             # Crop frame to ROI
-            roi_x_start = int(target_width * x_ROI_start)
-            roi_x_end = int(target_width * x_ROI_end)
-            roi_y_start = int(target_height * y_ROI_start)
-            roi_y_end = int(target_height * y_ROI_end)
-
-
-
+            roi_x_start = int(pi_cam_config_width * x_ROI_start)
+            roi_x_end = int(pi_cam_config_width * x_ROI_end)
+            roi_y_start = int(pi_cam_config_height * y_ROI_start)
+            roi_y_end = int(pi_cam_config_height * y_ROI_end)
             
             # First, maintain original aspect ratio by keeping the full height
             cropped_frame = frame[roi_y_start:roi_y_end, roi_x_start:roi_x_end]
@@ -382,18 +379,18 @@ def main():
             
             # Resize maintaining aspect ratio
             aspect_ratio = cropped_frame.shape[1] / cropped_frame.shape[0]
-            if aspect_ratio > (target_width / target_height):
-                new_width = target_width
-                new_height = int(target_width / aspect_ratio)
-                vertical_padding = (target_height - new_height) // 2
+            if aspect_ratio > (pi_cam_config_width / pi_cam_config_height):
+                new_width = pi_cam_config_width
+                new_height = int(pi_cam_config_width / aspect_ratio)
+                vertical_padding = (pi_cam_config_height - new_height) // 2
                 frame = cv2.resize(cropped_frame, (new_width, new_height))
                 # Add padding
                 frame = cv2.copyMakeBorder(frame, vertical_padding, vertical_padding, 
                                          0, 0, cv2.BORDER_CONSTANT, value=[0, 0, 0])
             else:
-                new_height = target_height
-                new_width = int(target_height * aspect_ratio)
-                horizontal_padding = (target_width - new_width) // 2
+                new_height = pi_cam_config_height
+                new_width = int(pi_cam_config_height * aspect_ratio)
+                horizontal_padding = (pi_cam_config_width - new_width) // 2
                 frame = cv2.resize(cropped_frame, (new_width, new_height))
                 # Add padding
                 frame = cv2.copyMakeBorder(frame, 0, 0, horizontal_padding, 
@@ -401,9 +398,9 @@ def main():
             
             # Add dimension check
             current_height, current_width = frame.shape[:2]
-            if current_width != roi_width or current_height != target_height:
+            if current_width != roi_width or current_height != pi_cam_config_height:
                 print(f"Warning: Frame dimensions ({current_width}x{current_height}) "
-                      f"don't match expected dimensions ({roi_width}x{target_height})")
+                      f"don't match expected dimensions ({roi_width}x{pi_cam_config_height})")
             
             
 
