@@ -56,7 +56,8 @@ def process_frame(frame, model, tracker):
     
     # YOLO detection on ROI frame
     yolo_start = time.time()
-    results = model(frame, conf=0.5)[0]
+    # Add imgsz parameter to match ROI dimensions
+    results = model(frame, conf=0.5, imgsz=(frame.shape[1], frame.shape[0]))[0]
     yolo_end = time.time()
 
     print(f"\nDetected objects: {len(results.boxes)}")
