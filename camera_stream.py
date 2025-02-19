@@ -19,6 +19,10 @@ orientation_memory = defaultdict(lambda: {"orientation": "unknown", "angle": 0, 
 ROI_start = 0.40
 ROI_end = 0.60
 
+# Add these parameters near the other ROI parameters
+ROI_height_start = 0.25  # Start at 25% from the top
+ROI_height_end = 0.75    # End at 75% from the top
+
 # aspect ratio
 aspect_ratio_threshold = 0.60
 
@@ -353,25 +357,28 @@ def main():
             # Crop frame to ROI
             roi_x_start = int(target_width * ROI_start)
             roi_x_end = int(target_width * ROI_end)
+            roi_y_start = int(target_height * ROI_height_start)
+            roi_y_end = int(target_height * ROI_height_end)
             
-            # First, maintain original aspect ratio by keeping the full height
-            cropped_frame = frame[:, roi_x_start:roi_x_end]
+            # Crop frame for both width and height
+            cropped_frame = frame[roi_y_start:roi_y_end, roi_x_start:roi_x_end]
 
-            
             # Resize maintaining aspect ratio
+            roi_height = roi_y_end - roi_y_start
             aspect_ratio = cropped_frame.shape[1] / cropped_frame.shape[0]
-            if aspect_ratio > (target_width / target_height):
-                new_width = target_width
-                new_height = int(target_width / aspect_ratio)
-                vertical_padding = (target_height - new_height) // 2
+            
+            if aspect_ratio > (roi_width / roi_height):
+                new_width = roi_width
+                new_height = int(roi_width / aspect_ratio)
+                vertical_padding = (roi_height - new_height) // 2
                 frame = cv2.resize(cropped_frame, (new_width, new_height))
                 # Add padding
                 frame = cv2.copyMakeBorder(frame, vertical_padding, vertical_padding, 
                                          0, 0, cv2.BORDER_CONSTANT, value=[0, 0, 0])
             else:
-                new_height = target_height
-                new_width = int(target_height * aspect_ratio)
-                horizontal_padding = (target_width - new_width) // 2
+                new_height = roi_height
+                new_width = int(roi_height * aspect_ratio)
+                horizontal_padding = (roi_width - new_width) // 2
                 frame = cv2.resize(cropped_frame, (new_width, new_height))
                 # Add padding
                 frame = cv2.copyMakeBorder(frame, 0, 0, horizontal_padding, 
@@ -389,7 +396,7 @@ def main():
             # Process frame
             process_start = time.time()
             # tracked_objects, orientations, roi_bounds = process_frame(frame, model, tracker)
-            tracked_objects, orientations, roi_bounds = process_frame(cropped_frame, model, tracker)
+            tracked_objects, orientations, roi_bounds = process_frame(frame, model, tracker)
             process_end = time.time()
             
             # Print summary
@@ -399,7 +406,7 @@ def main():
             # Draw results
             draw_start = time.time()
             # frame = draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds)
-            frame = draw_boxes_and_orientations(cropped_frame, tracked_objects, orientations, roi_bounds)
+            frame = draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds)
             draw_end = time.time()
             
             server.update_frame('camera1', frame)
