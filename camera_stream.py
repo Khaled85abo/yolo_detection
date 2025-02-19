@@ -165,8 +165,8 @@ def get_plank_orientation(points, width, height):
     """
     Determine plank orientation based on bounding box characteristics
     """
-    # Calculate aspect ratio
-    aspect_ratio = width / height if height != 0 else 0
+    # Calculate aspect ratio for the bounding box
+    bounding_box_aspect_ratio = width / height if height != 0 else 0
 
     # Calculate rotated rectangle for angle
     rect = cv2.minAreaRect(points)
@@ -181,7 +181,7 @@ def get_plank_orientation(points, width, height):
         angle -= 180
 
     # For vertical planks (correct orientation), aspect ratio should be < 1
-    if aspect_ratio < aspect_ratio_threshold:  # height is significantly larger than width
+    if bounding_box_aspect_ratio < aspect_ratio_threshold:  # height is significantly larger than width
         print("Orientation: correct")
         orientation = "correct"
     # elif aspect_ratio > 1.5:  # width is significantly larger than height
@@ -191,7 +191,7 @@ def get_plank_orientation(points, width, height):
         orientation = "incorrect"  # For cases where orientation is ambiguous
 
 
-    return orientation, angle, aspect_ratio
+    return orientation, angle, bounding_box_aspect_ratio
 
 def draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds):
     """
