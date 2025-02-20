@@ -141,9 +141,17 @@ def process_frame(frame, model, tracker):
                 stop_memory["stop_frames"] += 1
                 if stop_memory["stop_frames"] >= STOP_THRESHOLD_FRAMES:
                     stop_memory["is_stopped"] = True
+                    print(f"Plank {track_id} has stopped in orientation: {orientation}")
+                    # - Send a signal to a control system
+                    # - Log the event
+                    # - Trigger an alarm
+                    # - Take a snapshot
+                    # - etc.
+
             else:
                 stop_memory["stop_frames"] = 0
                 stop_memory["is_stopped"] = False
+                print(f"Plank {track_id} has started moving again")
 
         bbox = [x1, y1, width, height]
         points = detection_points.get(tuple(bbox), np.array([
@@ -220,11 +228,9 @@ def get_plank_orientation(points, width, height):
     if aspect_ratio < aspect_ratio_threshold:  # height is significantly larger than width
         print("Orientation: correct")
         orientation = "correct"
-    # elif aspect_ratio > 1.5:  # width is significantly larger than height
-    #     orientation = "incorrect"
     else:
         print("Orientation: incorrect")
-        orientation = "incorrect"  # For cases where orientation is ambiguous
+        orientation = "incorrect" 
 
 
     return orientation, angle, aspect_ratio
