@@ -155,6 +155,22 @@ def process_frame(frame, model, tracker):
         width = x2 - x1
         height = y2 - y1
         
+        bbox = [x1, y1, width, height]
+        points = detection_points.get(tuple(bbox), np.array([
+            [x1, y1], [x2, y1],
+            [x2, y2], [x1, y2]
+        ], dtype=np.float32))
+
+        # Calculate orientation first
+        orientation, angle, aspect_ratio = get_plank_orientation(points, width, height)
+        if orientation != "unknown":
+            orientation_memory[track_id] = {
+                "orientation": orientation,
+                "angle": angle,
+                "aspect_ratio": aspect_ratio,
+                "in_roi": True
+            }
+        
         # Calculate center point for stop detection
         center_x = (x1 + x2) // 2
         center_y = (y1 + y2) // 2
@@ -180,31 +196,10 @@ def process_frame(frame, model, tracker):
                 if stop_memory["stop_frames"] >= STOP_THRESHOLD_FRAMES:
                     stop_memory["is_stopped"] = True
                     print(f"Plank {track_id} has stopped in orientation: {orientation}")
-                    # - Send a signal to a control system
-                    # - Log the event
-                    # - Trigger an alarm
-                    # - Take a snapshot
-                    # - etc.
-
             else:
                 stop_memory["stop_frames"] = 0
                 stop_memory["is_stopped"] = False
                 print(f"Plank {track_id} has started moving again")
-
-        bbox = [x1, y1, width, height]
-        points = detection_points.get(tuple(bbox), np.array([
-            [x1, y1], [x2, y1],
-            [x2, y2], [x1, y2]
-        ], dtype=np.float32))
-
-        orientation, angle, aspect_ratio = get_plank_orientation(points, width, height)
-        if orientation != "unknown":
-            orientation_memory[track_id] = {
-                "orientation": orientation,
-                "angle": angle,
-                "aspect_ratio": aspect_ratio,
-                "in_roi": True
-            }
 
         memory = orientation_memory[track_id]
         final_orientations.append((
