@@ -62,7 +62,12 @@ def process_frame(frame, model, tracker):
     
     # YOLO detection on ROI frame
     yolo_start = time.time()
+
+    # the trained model only detects the plank class
     results = model(frame, conf=0.5)[0]
+
+    # but if the model is trained on multiple classes, you can specify the class
+    # results = model(frame, conf=0.5, classes=[0])[0]
     yolo_end = time.time()
 
     print(f"\nDetected objects: {len(results.boxes)}")
@@ -87,7 +92,7 @@ def process_frame(frame, model, tracker):
         # Calculate width and height
         width = x2 - x1
         height = y2 - y1
-
+        # 20 represents the minimum size threshold (in pixels) for both the width and height of detected objects
         if confidence > 0.3 and width > 20 and height > 20:
             bbox = [x1, y1, width, height]
             detections.append((bbox, confidence, class_id))
@@ -110,6 +115,39 @@ def process_frame(frame, model, tracker):
     # Orientation and stop detection processing
     orient_start = time.time()
     final_orientations = []
+    
+    # Check for overlaps between all pairs of tracked objects
+    for i, track1 in enumerate(tracked_objects):
+        ltrb1 = track1.to_ltrb()
+        box1 = [int(x) for x in ltrb1]  # [x1, y1, x2, y2]
+        
+        # Check overlap with all other boxes
+        for j, track2 in enumerate(tracked_objects[i+1:], i+1):
+            ltrb2 = track2.to_ltrb()
+            box2 = [int(x) for x in ltrb2]  # [x1, y1, x2, y2]
+            
+            # Calculate intersection
+            x_left = max(box1[0], box2[0])
+            y_top = max(box1[1], box2[1])
+            x_right = min(box1[2], box2[2])
+            y_bottom = min(box1[3], box2[3])
+            
+            if x_right > x_left and y_bottom > y_top:
+                # Calculate overlap area
+                intersection_area = (x_right - x_left) * (y_bottom - y_top)
+                box1_area = (box1[2] - box1[0]) * (box1[3] - box1[1])
+                box2_area = (box2[2] - box2[0]) * (box2[3] - box2[1])
+                
+                # Calculate overlap percentage for both boxes
+                overlap_percent1 = (intersection_area / box1_area) * 100
+                overlap_percent2 = (intersection_area / box2_area) * 100
+                
+                if overlap_percent1 > 20 or overlap_percent2 > 20:  # Adjust threshold as needed
+                    print(f"Warning: Overlap detected between planks {track1.track_id} and {track2.track_id}")
+                    print(f"Overlap percentage: {overlap_percent1:.1f}% of plank {track1.track_id}, "
+                          f"{overlap_percent2:.1f}% of plank {track2.track_id}")
+
+    # Continue with existing orientation processing
     for track in tracked_objects:
         track_id = track.track_id
         ltrb = track.to_ltrb()
@@ -241,6 +279,7 @@ def draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds
     """
     used_positions = {}
 
+    # First, draw all regular boxes and labels
     for track, (points, angle, orientation, aspect_ratio, _, is_stopped) in zip(tracked_objects, orientations):
         if not track.is_confirmed():
             continue
@@ -290,7 +329,36 @@ def draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds
         # end_y = center_y + int(line_length * np.sin(np.radians(angle)))
         # cv2.line(frame, (center_x, center_y), (end_x, end_y), color, 2)
 
+    # Then check for overlaps and draw them
+    for i, track1 in enumerate(tracked_objects):
+        ltrb1 = track1.to_ltrb()
+        box1 = [int(x) for x in ltrb1]
+        
+        for j, track2 in enumerate(tracked_objects[i+1:], i+1):
+            ltrb2 = track2.to_ltrb()
+            box2 = [int(x) for x in ltrb2]
+            
+            # Calculate intersection
+            x_left = max(box1[0], box2[0])
+            y_top = max(box1[1], box2[1])
+            x_right = min(box1[2], box2[2])
+            y_bottom = min(box1[3], box2[3])
+            
+            if x_right > x_left and y_bottom > y_top:
+                # Draw overlap area in semi-transparent red
+                overlap_area = np.array([[x_left, y_top], [x_right, y_top],
+                                       [x_right, y_bottom], [x_left, y_bottom]])
+                overlay = frame.copy()
+                cv2.fillPoly(overlay, [overlap_area], (0, 0, 255))
+                cv2.addWeighted(overlay, 0.3, frame, 0.7, 0, frame)
+                
+                # Draw warning text
+                warning_text = f"Overlap: {track1.track_id}-{track2.track_id}"
+                cv2.putText(frame, warning_text, (x_left, y_top - 5),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+
     return frame
+
 def main():
     print("Initializing camera...")
     picam2 = Picamera2()
