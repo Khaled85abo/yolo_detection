@@ -101,7 +101,7 @@ class AsyncFrameProcessor:
         # Returns True if overlap detected
         pass
 
-def process_frame(frame, model, tracker):
+def process_frame(frame, model, tracker, server):
     """
     Process each frame for object detection and orientation tracking
     """
@@ -286,6 +286,13 @@ def process_frame(frame, model, tracker):
         f"Parse: {parse_time:.3f}s | "
         f"Track: {track_time:.3f}s | "
         f"Orientation: {orient_time:.3f}s"
+    )
+
+    # Update server with current status
+    server.update_status(
+        overlapped=[(t1.track_id, t2.track_id) for t1, t2 in final_orientations if t1[4] and t2[4]],
+        stopped=[track_id for track, (_, _, _, _, _, is_stopped) in zip(tracked_objects, final_orientations) if is_stopped],
+        incorrect=[track_id for track, (_, _, orientation, _, _, _) in zip(tracked_objects, final_orientations) if orientation == "incorrect"]
     )
 
     return tracked_objects, final_orientations, (0, frame.shape[1])
@@ -515,7 +522,7 @@ def main():
             
             # Process frame
             process_start = time.time()
-            tracked_objects, orientations, roi_bounds = process_frame(cropped_frame, model, tracker)
+            tracked_objects, orientations, roi_bounds = process_frame(cropped_frame, model, tracker, server)
             process_end = time.time()
             
             # Process warnings asynchronously
