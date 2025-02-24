@@ -167,6 +167,9 @@ def process_frame(frame, model, tracker, server):
     orient_start = time.time()
     final_orientations = []
     
+    # Store overlap pairs
+    overlapped_pairs = []
+    
     # Check for overlaps between all pairs of tracked objects
     for i, track1 in enumerate(tracked_objects):
         ltrb1 = track1.to_ltrb()
@@ -176,8 +179,9 @@ def process_frame(frame, model, tracker, server):
             ltrb2 = track2.to_ltrb()
             
             if _check_overlap_from_boxes(ltrb1, ltrb2):
+                overlapped_pairs.append((track1.track_id, track2.track_id))
                 print(f"Warning: Overlap detected between planks {track1.track_id} and {track2.track_id}")
-                # You might want to calculate the exact overlap percentages for logging
+                # Calculate and print overlap percentages...
                 box1 = [int(x) for x in ltrb1]
                 box2 = [int(x) for x in ltrb2]
                 x_left = max(box1[0], box2[0])
@@ -281,12 +285,9 @@ def process_frame(frame, model, tracker, server):
         f"Orientation: {orient_time:.3f}s"
     )
 
-    # Update server with current status
+    # Update server with current status - now using pre-calculated overlapped_pairs
     server.update_status(
-        overlapped=[(track1.track_id, track2.track_id) 
-                   for i, track1 in enumerate(tracked_objects)
-                   for j, track2 in enumerate(tracked_objects[i+1:], i+1)
-                   if _check_overlap_from_boxes(track1.to_ltrb(), track2.to_ltrb())],
+        overlapped=overlapped_pairs,
         stopped=[track.track_id 
                 for track, (_, _, _, _, _, is_stopped) in zip(tracked_objects, final_orientations) 
                 if is_stopped],

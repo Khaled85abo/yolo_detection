@@ -2,7 +2,6 @@
 #include <WebServer.h>
 #include <SPIFFS.h>
 #include <HTTPClient.h>
-#include <WebSocketsClient.h>
 
 // Flask server IP address
 const char *flask_server_ip = "http://192.168.1.249:5000/api/status";
@@ -17,42 +16,6 @@ const int YELLOW_LED = 3;
 const int GREEN_LED = 4;
 
 WebServer server(80);
-
-// Add WebSocket client instance
-WebSocketsClient webSocket;
-
-// Update Flask server details
-const char *ws_server = "192.168.1.249";
-const int ws_port = 8765; // Typical WebSocket port, adjust as needed
-
-// Add WebSocket event handler
-void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
-{
-    switch (type)
-    {
-    case WStype_DISCONNECTED:
-        Serial.println("WebSocket Disconnected!");
-        break;
-    case WStype_CONNECTED:
-        Serial.println("WebSocket Connected!");
-        break;
-    case WStype_TEXT:
-        // Handle incoming WebSocket message
-        String message = String((char *)payload);
-        handleStatusUpdate(message);
-        // Forward the status to connected web clients
-        server.send(200, "application/json", message);
-        break;
-    }
-}
-
-void handleStatusUpdate(String payload)
-{
-    // Update LED states based on received payload
-    digitalWrite(RED_LED, payload.indexOf("\"stop\": true") > -1 ? HIGH : LOW);
-    digitalWrite(YELLOW_LED, payload.indexOf("\"overlap\": true") > -1 ? HIGH : LOW);
-    digitalWrite(GREEN_LED, payload.indexOf("\"incorrect\": true") > -1 ? HIGH : LOW);
-}
 
 // HTML content as a string constant
 const char index_html[] PROGMEM = R"rawliteral(
@@ -92,24 +55,16 @@ const char index_html[] PROGMEM = R"rawliteral(
     </div>
     <button onclick="stopConveyor()" style="background-color: #ff6666;">STOP CONVEYOR</button>
     <script>
-        const ws = new WebSocket('ws://192.168.1.249:8765/ws');
-        
-        ws.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            console.log(data);
-            updateWarning('stopped', data.stop);
-            updateWarning('overlap', data.overlap);
-            updateWarning('incorrect', data.incorrect);
-        };
-
-        ws.onclose = function() {
-            console.log('WebSocket connection closed');
-            // Attempt to reconnect
-            setTimeout(function() {
-                location.reload();
-            }, 5000);
-        };
-
+        function updateStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    updateWarning('stopped', data.stop);
+                    updateWarning('overlap', data.overlap);
+                    updateWarning('incorrect', data.incorrect);
+                });
+        }
         function updateWarning(type, active) {
             const element = document.getElementById(type);
             element.className = 'warning ' + (active ? 'active' : 'inactive');
@@ -120,6 +75,8 @@ const char index_html[] PROGMEM = R"rawliteral(
         function stopConveyor() {
             fetch('/api/stop-conveyor', { method: 'POST' });
         }
+        setInterval(updateStatus, 1000);
+        updateStatus();
     </script>
 </body>
 </html>
@@ -140,11 +97,6 @@ void setup()
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
 
-    // Initialize WebSocket connection
-    webSocket.begin(ws_server, ws_port, "/ws");
-    webSocket.onEvent(webSocketEvent);
-    webSocket.setReconnectInterval(5000);
-
     // Route for root / web page
     server.on("/", HTTP_GET, []()
               { server.send(200, "text/html", index_html); });
@@ -159,7 +111,6 @@ void setup()
 
 void loop()
 {
-    webSocket.loop();
     server.handleClient();
 }
 
