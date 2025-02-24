@@ -11,6 +11,11 @@ import os
 import threading
 from queue import Queue
 import logging
+import asyncio
+import json
+from enum import Enum, auto
+from typing import Optional, Dict, List
+from mc.ESP32Controller import ESP32Controller, PlankStatus, WarningLevel
 
 # Add this as a global variable
 orientation_memory = defaultdict(lambda: {"orientation": "unknown", "angle": 0, "aspect_ratio": 0})
@@ -49,7 +54,53 @@ stop_detection_memory = defaultdict(lambda: {
     "is_stopped": False
 })
 
-def process_frame(frame, model, tracker):
+class AsyncFrameProcessor:
+    def __init__(self, esp32_controller: ESP32Controller):
+        self.esp32 = esp32_controller
+        self.loop = asyncio.get_event_loop()
+
+    async def process_frame_async(self, frame, tracked_objects, orientations):
+        """Asynchronous processing of warnings and ESP32 communication"""
+        stopped_planks = []
+        overlapped_pairs = set()
+        incorrect_planks = []
+
+        # Process overlaps
+        for i, track1 in enumerate(tracked_objects):
+            for j, track2 in enumerate(tracked_objects[i+1:], i+1):
+                if self._check_overlap(track1, track2):
+                    pair = tuple(sorted([track1.track_id, track2.track_id]))
+                    overlapped_pairs.add(pair)
+                    await self.esp32.send_warning(
+                        PlankStatus.OVERLAPPED,
+                        WarningLevel.ERROR,
+                        {"plank_ids": list(pair)}
+                    )
+
+        # Process orientations and stops
+        for track, (_, _, orientation, _, _, is_stopped) in zip(tracked_objects, orientations):
+            if is_stopped:
+                stopped_planks.append(track.track_id)
+                await self.esp32.send_warning(
+                    PlankStatus.STOPPED,
+                    WarningLevel.WARNING,
+                    {"plank_id": track.track_id}
+                )
+
+            if orientation == "incorrect":
+                incorrect_planks.append(track.track_id)
+                await self.esp32.send_warning(
+                    PlankStatus.INCORRECT,
+                    WarningLevel.WARNING,
+                    {"plank_id": track.track_id}
+                )
+
+    def _check_overlap(self, track1, track2):
+        # Existing overlap detection logic
+        # Returns True if overlap detected
+        pass
+
+def process_frame(frame, model, tracker, server):
     """
     Process each frame for object detection and orientation tracking
     """
@@ -119,33 +170,27 @@ def process_frame(frame, model, tracker):
     # Check for overlaps between all pairs of tracked objects
     for i, track1 in enumerate(tracked_objects):
         ltrb1 = track1.to_ltrb()
-        box1 = [int(x) for x in ltrb1]  # [x1, y1, x2, y2]
         
         # Check overlap with all other boxes
         for j, track2 in enumerate(tracked_objects[i+1:], i+1):
             ltrb2 = track2.to_ltrb()
-            box2 = [int(x) for x in ltrb2]  # [x1, y1, x2, y2]
             
-            # Calculate intersection
-            x_left = max(box1[0], box2[0])
-            y_top = max(box1[1], box2[1])
-            x_right = min(box1[2], box2[2])
-            y_bottom = min(box1[3], box2[3])
-            
-            if x_right > x_left and y_bottom > y_top:
-                # Calculate overlap area
+            if _check_overlap_from_boxes(ltrb1, ltrb2):
+                print(f"Warning: Overlap detected between planks {track1.track_id} and {track2.track_id}")
+                # You might want to calculate the exact overlap percentages for logging
+                box1 = [int(x) for x in ltrb1]
+                box2 = [int(x) for x in ltrb2]
+                x_left = max(box1[0], box2[0])
+                y_top = max(box1[1], box2[1])
+                x_right = min(box1[2], box2[2])
+                y_bottom = min(box1[3], box2[3])
                 intersection_area = (x_right - x_left) * (y_bottom - y_top)
                 box1_area = (box1[2] - box1[0]) * (box1[3] - box1[1])
                 box2_area = (box2[2] - box2[0]) * (box2[3] - box2[1])
-                
-                # Calculate overlap percentage for both boxes
                 overlap_percent1 = (intersection_area / box1_area) * 100
                 overlap_percent2 = (intersection_area / box2_area) * 100
-                
-                if overlap_percent1 > 20 or overlap_percent2 > 20:  # Adjust threshold as needed
-                    print(f"Warning: Overlap detected between planks {track1.track_id} and {track2.track_id}")
-                    print(f"Overlap percentage: {overlap_percent1:.1f}% of plank {track1.track_id}, "
-                          f"{overlap_percent2:.1f}% of plank {track2.track_id}")
+                print(f"Overlap percentage: {overlap_percent1:.1f}% of plank {track1.track_id}, "
+                      f"{overlap_percent2:.1f}% of plank {track2.track_id}")
 
     # Continue with existing orientation processing
     for track in tracked_objects:
@@ -234,6 +279,20 @@ def process_frame(frame, model, tracker):
         f"Parse: {parse_time:.3f}s | "
         f"Track: {track_time:.3f}s | "
         f"Orientation: {orient_time:.3f}s"
+    )
+
+    # Update server with current status
+    server.update_status(
+        overlapped=[(track1.track_id, track2.track_id) 
+                   for i, track1 in enumerate(tracked_objects)
+                   for j, track2 in enumerate(tracked_objects[i+1:], i+1)
+                   if _check_overlap_from_boxes(track1.to_ltrb(), track2.to_ltrb())],
+        stopped=[track.track_id 
+                for track, (_, _, _, _, _, is_stopped) in zip(tracked_objects, final_orientations) 
+                if is_stopped],
+        incorrect=[track.track_id 
+                  for track, (_, _, orientation, _, _, _) in zip(tracked_objects, final_orientations) 
+                  if orientation == "incorrect"]
     )
 
     return tracked_objects, final_orientations, (0, frame.shape[1])
@@ -354,6 +413,28 @@ def draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds
 
     return frame
 
+def _check_overlap_from_boxes(ltrb1, ltrb2):
+    """Helper function to check overlap using the same logic as in process_frame"""
+    box1 = [int(x) for x in ltrb1]  # [x1, y1, x2, y2]
+    box2 = [int(x) for x in ltrb2]  # [x1, y1, x2, y2]
+    
+    # Calculate intersection
+    x_left = max(box1[0], box2[0])
+    y_top = max(box1[1], box2[1])
+    x_right = min(box1[2], box2[2])
+    y_bottom = min(box1[3], box2[3])
+    
+    if x_right > x_left and y_bottom > y_top:
+        intersection_area = (x_right - x_left) * (y_bottom - y_top)
+        box1_area = (box1[2] - box1[0]) * (box1[3] - box1[1])
+        box2_area = (box2[2] - box2[0]) * (box2[3] - box2[1])
+        
+        overlap_percent1 = (intersection_area / box1_area) * 100
+        overlap_percent2 = (intersection_area / box2_area) * 100
+        
+        return overlap_percent1 > 20 or overlap_percent2 > 20
+    return False
+
 def main():
     print("Initializing camera...")
     picam2 = Picamera2()
@@ -409,44 +490,11 @@ def main():
 
 
 
-    # # Try with a simple output path first
-    # test_output = 'test_output.mp4'
-    # print(f"Testing VideoWriter with simple path: {test_output}")
-    
-    # try:
-    #     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    #     test_out = cv2.VideoWriter(test_output, fourcc, custom_fps, (target_width, target_height))
-        
-    #     if test_out.isOpened():
-    #         print("VideoWriter opened successfully with test path")
-    #         test_out.release()
-            
-    #         # Now try with the actual output path
-    #         output_avi = output_path.rsplit('.', 1)[0] + '.mp4'
-    #         output_avi_roi = output_path.rsplit('.', 1)[0] + '_roi.mp4'
-    #         out = cv2.VideoWriter(output_avi, fourcc, custom_fps, (target_width, target_height))
-    #         out_roi = cv2.VideoWriter(output_avi_roi, fourcc, custom_fps, (roi_width, target_height))
-            
-            
-    #         if out.isOpened():
-    #             output_path = output_avi
-    #             print(f"Successfully initialized VideoWriter: {output_path}")
-    #         else:
-    #             raise Exception("Failed to open VideoWriter with actual path")
-    #     else:
-    #         raise Exception("Failed to open VideoWriter with test path")
-            
-    # except Exception as e:
-    #     print(f"Failed to initialize VideoWriter: {str(e)}")
-    #     print("Trying with absolute path...")
-        
-
-
-    # print(f"Final output path: {output_path}")
-
-
-
     try:
+        # Initialize ESP32 controller and frame processor
+        esp32 = ESP32Controller()
+        frame_processor = AsyncFrameProcessor(esp32)
+        
         frame_count = 0
         while True:
             frame_count += 1
@@ -459,11 +507,6 @@ def main():
             frame = picam2.capture_array()
             capture_end = time.time()
             
-            # Color conversion
-            # color_conv_start = time.time()
-            # frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-            # color_conv_end = time.time()
-            # Crop frame to ROI
             roi_x_start = int(target_width * ROI_start)
             roi_x_end = int(target_width * ROI_end)
             
@@ -501,9 +544,13 @@ def main():
             
             # Process frame
             process_start = time.time()
-            # tracked_objects, orientations, roi_bounds = process_frame(frame, model, tracker)
-            tracked_objects, orientations, roi_bounds = process_frame(cropped_frame, model, tracker)
+            tracked_objects, orientations, roi_bounds = process_frame(cropped_frame, model, tracker, server)
             process_end = time.time()
+            
+            # Process warnings asynchronously
+            asyncio.run(frame_processor.process_frame_async(
+                cropped_frame, tracked_objects, orientations
+            ))
             
             # Print summary
             objects_in_roi = len(tracked_objects)
@@ -511,7 +558,6 @@ def main():
             
             # Draw results
             draw_start = time.time()
-            # frame = draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds)
             frame = draw_boxes_and_orientations(cropped_frame, tracked_objects, orientations, roi_bounds)
             draw_end = time.time()
             
@@ -519,8 +565,6 @@ def main():
             
             # Write original frame to video file
             out_write_start = time.time()
-            # out.write(frame)
-            # out_roi.write(cropped_frame)
             out_cls.write_frame(frame, writer_key='camera1')
             out_write_end = time.time()
             

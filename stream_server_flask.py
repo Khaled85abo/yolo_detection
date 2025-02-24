@@ -31,35 +31,41 @@
 # print(server1 is server2)  # Will print True
 
 
-from flask import Flask, Response
+from flask import Flask, Response, jsonify, request
 import cv2
 import threading
 from queue import Queue
 import logging
+from typing import Dict, List
 
 
-# Singleton class to ensure only one instance of StreamServer is created, even if multiple instances are created in different files.
+class PlankStatus:
+    def __init__(self):
+        self.overlap: List[tuple] = []
+        self.stop: List[int] = []
+        self.incorrect: List[int] = []
+        self.conveyor_status: str = "running"
+
 class StreamServer:
     _instance = None
     _lock = threading.Lock()
 
-# The combination of __new__ and _instance ensures we only ever create one StreamServer instance.
     def __new__(cls):
-        with cls._lock:                      # 1. Thread-safe lock
-            if cls._instance is None:        # 2. Check if instance exists
-                # 3. Create new instance if none exists
+        with cls._lock:
+            if cls._instance is None:
                 cls._instance = super(StreamServer, cls).__new__(cls)
-                
-                # 4. Initialize the instance attributes
                 cls._instance.app = Flask(__name__)
                 cls._instance.cameras = {}
                 cls._instance.frame_locks = {}
+                cls._instance.plank_status = PlankStatus()
                 
-                # 5. Set up Flask routes
+                # Add new routes for status and control
                 cls._instance.app.route('/')(cls._instance.index)
                 cls._instance.app.route('/video_feed/<camera_id>')(cls._instance.video_feed)
+                cls._instance.app.route('/api/status', methods=['GET'])(cls._instance.get_status)
+                cls._instance.app.route('/api/control', methods=['POST'])(cls._instance.control_conveyor)
                 
-            return cls._instance             # 6. Return existing or new instance
+            return cls._instance
 
     def __init__(self):
         # Skip initialization if already done
@@ -101,8 +107,35 @@ class StreamServer:
         return Response(self.generate_frames(camera_id),
                         mimetype='multipart/x-mixed-replace; boundary=frame')
     
+    def update_status(self, overlapped=None, stopped=None, incorrect=None):
+        """Update the status of planks"""
+        if overlapped is not None:
+            self.plank_status.overlap = False if len(overlapped) == 0 else True
+        if stopped is not None:
+            self.plank_status.stop = False if len(stopped) == 0 else True
+        if incorrect is not None:
+            self.plank_status.incorrect = False if len(incorrect) == 0 else True
+
+    def get_status(self):
+        """API endpoint to get current status"""
+        return jsonify({
+            'overlap': self.plank_status.overlap,
+            'stop': self.plank_status.stop,
+            'incorrect': self.plank_status.incorrect,
+            'conveyor_status': self.plank_status.conveyor_status
+        })
+
+    def control_conveyor(self):
+        """API endpoint to control conveyor"""
+        action = request.json.get('action')
+        if action in ['stop', 'start']:
+            self.plank_status.conveyor_status = 'stopped' if action == 'stop' else 'running'
+            # Here you would add actual conveyor control logic
+            return jsonify({'status': 'success', 'conveyor_status': self.plank_status.conveyor_status})
+        return jsonify({'status': 'error', 'message': 'Invalid action'})
+
     def index(self):
-        """Route for main page"""
+        """Enhanced main page with status and controls"""
         camera_feeds = ""
         for camera_id in self.cameras.keys():
             camera_feeds += f'<div><h2>Camera {camera_id}</h2>'
@@ -110,10 +143,58 @@ class StreamServer:
         
         return f"""
         <html>
+            <head>
+                <style>
+                    .status {{ padding: 10px; margin: 10px; border: 1px solid #ccc; }}
+                    .warning {{ color: red; }}
+                    .controls {{ margin: 20px; }}
+                    button {{ padding: 10px; margin: 5px; }}
+                </style>
+            </head>
             <body>
-                <h1>Plank Detection Streams</h1>
+                <h1>Plank Detection System</h1>
                 {camera_feeds}
-                <p>Status: Streaming</p>
+                <div class="status" id="status">
+                    Loading status...
+                </div>
+                <div class="controls">
+                    <button onclick="controlConveyor('stop')" style="background-color: #ff4444;">Stop Conveyor</button>
+                    <button onclick="controlConveyor('start')" style="background-color: #44ff44;">Start Conveyor</button>
+                </div>
+                <div id="warnings">
+                    <div id="stopped" class="warning inactive">
+                        <h3>Stopped Plank</h3>
+                        <button onclick="acknowledge('stopped')">Acknowledge</button>
+                    </div>
+                </div>
+                <script>
+                    function updateStatus() {{
+                        fetch('/api/status')
+                            .then(response => response.json())
+                            .then(data => {{
+                                console.log(data);
+                                document.getElementById('status').innerHTML = `
+                                    <p>Conveyor Status: <strong>${{data.conveyor_status}}</strong></p>
+                                    <p>Overlapped Planks: <strong>${{data.overlap ? 'Yes' : 'No'}}</strong></p>
+                                    <p>Stopped Planks: <strong>${{data.stop ? 'Yes' : 'No'}}</strong></p>
+                                    <p>Incorrect Planks: <strong>${{data.incorrect ? 'Yes' : 'No'}}</strong></p>
+                                `;
+                            }});
+                    }}
+
+                    function controlConveyor(action) {{
+                        fetch('/api/control', {{
+                            method: 'POST',
+                            headers: {{ 'Content-Type': 'application/json' }},
+                            body: JSON.stringify({{ action: action }})
+                        }})
+                        .then(response => response.json())
+                        .then(data => updateStatus());
+                    }}
+
+                    // Update status every second
+                    setInterval(updateStatus, 1000);
+                </script>
             </body>
         </html>
         """
