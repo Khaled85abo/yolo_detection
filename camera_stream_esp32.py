@@ -492,8 +492,8 @@ def main():
 
     try:
         # Initialize ESP32 controller and frame processor
-        esp32 = ESP32Controller()
-        frame_processor = AsyncFrameProcessor(esp32)
+        # esp32 = ESP32Controller()
+        # frame_processor = AsyncFrameProcessor(esp32)
         
         frame_count = 0
         while True:
@@ -548,9 +548,9 @@ def main():
             process_end = time.time()
             
             # Process warnings asynchronously
-            asyncio.run(frame_processor.process_frame_async(
-                cropped_frame, tracked_objects, orientations
-            ))
+            # asyncio.run(frame_processor.process_frame_async(
+            #     cropped_frame, tracked_objects, orientations
+            # ))
             
             # Print summary
             objects_in_roi = len(tracked_objects)
