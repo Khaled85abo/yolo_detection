@@ -1,6 +1,6 @@
 #include <WiFi.h>
 #include <WebServer.h>
-#include <SPIFFS.h>
+// #include <SPIFFS.h>
 #include <HTTPClient.h>
 
 // Flask server IP address
@@ -12,8 +12,8 @@ const char *password = "";
 
 // LED pins
 const int RED_LED = 2;
-const int YELLOW_LED = 3;
-const int GREEN_LED = 4;
+const int YELLOW_LED = 4;
+const int GREEN_LED = 5;
 
 WebServer server(80);
 
@@ -82,6 +82,18 @@ const char index_html[] PROGMEM = R"rawliteral(
 </html>
 )rawliteral";
 
+// Add these variables at the top with other globals
+unsigned long lastStatusCheck = 0;
+unsigned long lastBlinkTime = 0;
+const unsigned long STATUS_CHECK_INTERVAL = 1000; // Check every 1 second
+const unsigned long BLINK_INTERVAL = 250;         // Blink every 250ms
+bool ledState = false;
+
+// Global variables to store LED states
+bool redLedActive = false;
+bool yellowLedActive = false;
+bool greenLedActive = false;
+
 void setup()
 {
     Serial.begin(115200);
@@ -112,12 +124,33 @@ void setup()
 void loop()
 {
     server.handleClient();
+
+    // Check status periodically
+    unsigned long currentMillis = millis();
+    if (currentMillis - lastStatusCheck >= STATUS_CHECK_INTERVAL)
+    {
+        lastStatusCheck = currentMillis;
+        checkStatus();
+    }
+
+    // Handle LED blinking
+    if (currentMillis - lastBlinkTime >= BLINK_INTERVAL)
+    {
+        lastBlinkTime = currentMillis;
+        ledState = !ledState;
+
+        // Update LEDs based on their active state
+        if (redLedActive)
+            digitalWrite(RED_LED, ledState);
+        if (yellowLedActive)
+            digitalWrite(YELLOW_LED, ledState);
+        if (greenLedActive)
+            digitalWrite(GREEN_LED, ledState);
+    }
 }
 
-void handleStatus()
+void checkStatus()
 {
-    // Get status from Flask server
-    // if server is not reachable, use fake data
     HTTPClient http;
     http.begin(flask_server_ip);
     int httpCode = http.GET();
@@ -126,33 +159,33 @@ void handleStatus()
     {
         payload = "{\"stop\": false, \"overlap\": false, \"incorrect\": true}";
     }
-    // Turn on/off the warning lights
-    // Red: for stopped planks
-    // Yellow: for overlapped planks
-    // Green: for correct planks
-    if (payload.contains("\"stop\": true"))
-    {
-        digitalWrite(RED_LED, HIGH);
-    }
-    else
-    {
+
+    // Update LED states based on status
+    redLedActive = payload.indexOf("\"stop\": true") > -1;
+    yellowLedActive = payload.indexOf("\"overlap\": true") > -1;
+    greenLedActive = payload.indexOf("\"incorrect\": true") > -1;
+
+    // Turn off LEDs if they're not active
+    if (!redLedActive)
         digitalWrite(RED_LED, LOW);
-    }
-    if (payload.contains("\"overlap\": true"))
-    {
-        digitalWrite(YELLOW_LED, HIGH);
-    }
-    else
-    {
+    if (!yellowLedActive)
         digitalWrite(YELLOW_LED, LOW);
-    }
-    if (payload.contains("\"incorrect\": true"))
-    {
-        digitalWrite(GREEN_LED, HIGH);
-    }
-    else
-    {
+    if (!greenLedActive)
         digitalWrite(GREEN_LED, LOW);
+
+    http.end();
+}
+
+void handleStatus()
+{
+    // Get status from Flask server
+    HTTPClient http;
+    http.begin(flask_server_ip);
+    int httpCode = http.GET();
+    String payload = http.getString();
+    if (httpCode != 200)
+    {
+        payload = "{\"stop\": false, \"overlap\": false, \"incorrect\": true}";
     }
     http.end();
     server.send(200, "application/json", payload);

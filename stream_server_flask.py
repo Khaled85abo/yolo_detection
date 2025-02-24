@@ -110,18 +110,18 @@ class StreamServer:
     def update_status(self, overlapped=None, stopped=None, incorrect=None):
         """Update the status of planks"""
         if overlapped is not None:
-            self.plank_status.overlap = False if len(overlapped) == 0 else True
+            self.plank_status.overlap = overlapped
         if stopped is not None:
-            self.plank_status.stop = False if len(stopped) == 0 else True
+            self.plank_status.stop = stopped
         if incorrect is not None:
-            self.plank_status.incorrect = False if len(incorrect) == 0 else True
+            self.plank_status.incorrect = incorrect
 
     def get_status(self):
         """API endpoint to get current status"""
         return jsonify({
-            'overlap': self.plank_status.overlap,
-            'stop': self.plank_status.stop,
-            'incorrect': self.plank_status.incorrect,
+            'overlap': False if len(self.plank_status.overlap) == 0 else True,
+            'stop': False if len(self.plank_status.stop) == 0 else True,
+            'incorrect': False if len(self.plank_status.incorrect) == 0 else True,
             'conveyor_status': self.plank_status.conveyor_status
         })
 
