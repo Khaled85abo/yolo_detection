@@ -21,9 +21,15 @@ const char index_html[] PROGMEM = R"rawliteral(
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         .warning { padding: 10px; margin: 5px; border-radius: 5px; }
-        .active { background-color: #ffcccc; }
+        .active { background-color: #ffcccc; animation: blink 1s infinite; }
         .inactive { background-color: #ccffcc; }
         button { padding: 10px; margin: 5px; width: 100%; }
+        @keyframes blink {
+            0% { background-color: #ccffcc; }
+            50% { background-color: #ffcccc; }
+            100% { background-color: #ccffcc; }
+        }
+        .blink { animation: blink 1s infinite; }
     </style>
 </head>
 <body>
@@ -49,7 +55,7 @@ const char index_html[] PROGMEM = R"rawliteral(
                 .then(response => response.json())
                 .then(data => {
                     console.log(data);
-                    updateWarning('stopped', data.stopped);
+                    updateWarning('stopped', data.stop);
                     updateWarning('overlap', data.overlap);
                     updateWarning('incorrect', data.incorrect);
                 });
