@@ -15,7 +15,7 @@ import asyncio
 import json
 from enum import Enum, auto
 from typing import Optional, Dict, List
-from mc.ESP32Controller import ESP32Controller, PlankStatus, WarningLevel
+# from mc.ESP32Controller import ESP32Controller, PlankStatus, WarningLevel
 
 # Add this as a global variable
 orientation_memory = defaultdict(lambda: {"orientation": "unknown", "angle": 0, "aspect_ratio": 0})
@@ -54,51 +54,51 @@ stop_detection_memory = defaultdict(lambda: {
     "is_stopped": False
 })
 
-class AsyncFrameProcessor:
-    def __init__(self, esp32_controller: ESP32Controller):
-        self.esp32 = esp32_controller
-        self.loop = asyncio.get_event_loop()
+# class AsyncFrameProcessor:
+#     def __init__(self, esp32_controller: ESP32Controller):
+#         self.esp32 = esp32_controller
+#         self.loop = asyncio.get_event_loop()
 
-    async def process_frame_async(self, frame, tracked_objects, orientations):
-        """Asynchronous processing of warnings and ESP32 communication"""
-        stopped_planks = []
-        overlapped_pairs = set()
-        incorrect_planks = []
+#     async def process_frame_async(self, frame, tracked_objects, orientations):
+#         """Asynchronous processing of warnings and ESP32 communication"""
+#         stopped_planks = []
+#         overlapped_pairs = set()
+#         incorrect_planks = []
 
-        # Process overlaps
-        for i, track1 in enumerate(tracked_objects):
-            for j, track2 in enumerate(tracked_objects[i+1:], i+1):
-                if self._check_overlap(track1, track2):
-                    pair = tuple(sorted([track1.track_id, track2.track_id]))
-                    overlapped_pairs.add(pair)
-                    await self.esp32.send_warning(
-                        PlankStatus.OVERLAPPED,
-                        WarningLevel.ERROR,
-                        {"plank_ids": list(pair)}
-                    )
+#         # Process overlaps
+#         for i, track1 in enumerate(tracked_objects):
+#             for j, track2 in enumerate(tracked_objects[i+1:], i+1):
+#                 if self._check_overlap(track1, track2):
+#                     pair = tuple(sorted([track1.track_id, track2.track_id]))
+#                     overlapped_pairs.add(pair)
+#                     await self.esp32.send_warning(
+#                         PlankStatus.OVERLAPPED,
+#                         WarningLevel.ERROR,
+#                         {"plank_ids": list(pair)}
+#                     )
 
-        # Process orientations and stops
-        for track, (_, _, orientation, _, _, is_stopped) in zip(tracked_objects, orientations):
-            if is_stopped:
-                stopped_planks.append(track.track_id)
-                await self.esp32.send_warning(
-                    PlankStatus.STOPPED,
-                    WarningLevel.WARNING,
-                    {"plank_id": track.track_id}
-                )
+#         # Process orientations and stops
+#         for track, (_, _, orientation, _, _, is_stopped) in zip(tracked_objects, orientations):
+#             if is_stopped:
+#                 stopped_planks.append(track.track_id)
+#                 await self.esp32.send_warning(
+#                     PlankStatus.STOPPED,
+#                     WarningLevel.WARNING,
+#                     {"plank_id": track.track_id}
+#                 )
 
-            if orientation == "incorrect":
-                incorrect_planks.append(track.track_id)
-                await self.esp32.send_warning(
-                    PlankStatus.INCORRECT,
-                    WarningLevel.WARNING,
-                    {"plank_id": track.track_id}
-                )
+#             if orientation == "incorrect":
+#                 incorrect_planks.append(track.track_id)
+#                 await self.esp32.send_warning(
+#                     PlankStatus.INCORRECT,
+#                     WarningLevel.WARNING,
+#                     {"plank_id": track.track_id}
+#                 )
 
-    def _check_overlap(self, track1, track2):
-        # Existing overlap detection logic
-        # Returns True if overlap detected
-        pass
+#     def _check_overlap(self, track1, track2):
+#         # Existing overlap detection logic
+#         # Returns True if overlap detected
+#         pass
 
 def process_frame(frame, model, tracker, server):
     """
