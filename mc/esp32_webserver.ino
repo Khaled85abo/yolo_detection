@@ -117,10 +117,15 @@ void loop()
 void handleStatus()
 {
     // Get status from Flask server
+    // if server is not reachable, use fake data
     HTTPClient http;
     http.begin(flask_server_ip);
     int httpCode = http.GET();
     String payload = http.getString();
+    if (httpCode != 200)
+    {
+        payload = "{\"stop\": false, \"overlap\": false, \"incorrect\": true}";
+    }
     // Turn on/off the warning lights
     // Red: for stopped planks
     // Yellow: for overlapped planks
