@@ -41,9 +41,9 @@ from typing import Dict, List
 
 class PlankStatus:
     def __init__(self):
-        self.overlapped_planks: List[tuple] = []
-        self.stopped_planks: List[int] = []
-        self.incorrect_planks: List[int] = []
+        self.overlap: List[tuple] = []
+        self.stop: List[int] = []
+        self.incorrect: List[int] = []
         self.conveyor_status: str = "running"
 
 class StreamServer:
@@ -110,18 +110,18 @@ class StreamServer:
     def update_status(self, overlapped=None, stopped=None, incorrect=None):
         """Update the status of planks"""
         if overlapped is not None:
-            self.plank_status.overlapped_planks = overlapped
+            self.plank_status.overlap = False if len(overlapped) == 0 else True
         if stopped is not None:
-            self.plank_status.stopped_planks = stopped
+            self.plank_status.stop = False if len(stopped) == 0 else True
         if incorrect is not None:
-            self.plank_status.incorrect_planks = incorrect
+            self.plank_status.incorrect = False if len(incorrect) == 0 else True
 
     def get_status(self):
         """API endpoint to get current status"""
         return jsonify({
-            'overlapped_planks': self.plank_status.overlapped_planks,
-            'stopped_planks': self.plank_status.stopped_planks,
-            'incorrect_planks': self.plank_status.incorrect_planks,
+            'overlap': self.plank_status.overlap,
+            'stop': self.plank_status.stop,
+            'incorrect': self.plank_status.incorrect,
             'conveyor_status': self.plank_status.conveyor_status
         })
 
@@ -157,9 +157,9 @@ class StreamServer:
                             .then(data => {{
                                 document.getElementById('status').innerHTML = `
                                     <p>Conveyor Status: <strong>${{data.conveyor_status}}</strong></p>
-                                    <p class="warning">Overlapped Planks: ${{data.overlapped_planks.join(', ') || 'None'}}</p>
-                                    <p class="warning">Stopped Planks: ${{data.stopped_planks.join(', ') || 'None'}}</p>
-                                    <p class="warning">Incorrect Planks: ${{data.incorrect_planks.join(', ') || 'None'}}</p>
+                                    <p class="warning">Overlapped Planks: ${{data.overlap.join(', ') || 'None'}}</p>
+                                    <p class="warning">Stopped Planks: ${{data.stop.join(', ') || 'None'}}</p>
+                                    <p class="warning">Incorrect Planks: ${{data.incorrect.join(', ') || 'None'}}</p>
                                 `;
                             }});
                     }}

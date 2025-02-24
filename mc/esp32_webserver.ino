@@ -1,6 +1,10 @@
 #include <WiFi.h>
 #include <WebServer.h>
 #include <SPIFFS.h>
+#include <HTTPClient.h>
+
+// Flask server IP address
+const char *flask_server_ip = "http://192.168.1.249:5000/api/status";
 
 // Replace with your network credentials
 const char *ssid = "TN-JE3155";
@@ -44,6 +48,7 @@ const char index_html[] PROGMEM = R"rawliteral(
             fetch('/api/status')
                 .then(response => response.json())
                 .then(data => {
+                    console.log(data);
                     updateWarning('stopped', data.stopped);
                     updateWarning('overlap', data.overlap);
                     updateWarning('incorrect', data.incorrect);
@@ -100,8 +105,13 @@ void loop()
 
 void handleStatus()
 {
-    String json = "{\"stopped\":false,\"overlap\":false,\"incorrect\":false}";
-    server.send(200, "application/json", json);
+    // Get status from Flask server
+    HTTPClient http;
+    http.begin(flask_server_ip);
+    int httpCode = http.GET();
+    String payload = http.getString();
+    http.end();
+    server.send(200, "application/json", payload);
 }
 
 void handleAcknowledge()
