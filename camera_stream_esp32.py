@@ -45,6 +45,8 @@ tracker = DeepSort(
     embedder_gpu=True
 )
 
+OVERLAP_THRESHOLD = 0.20
+
 # Add these to the global variables section
 STOP_THRESHOLD_FRAMES = 5  # Number of frames to consider as a stop
 MOVEMENT_THRESHOLD = 10    # Pixel distance to consider as movement
@@ -178,23 +180,12 @@ def process_frame(frame, model, tracker, server):
         for j, track2 in enumerate(tracked_objects[i+1:], i+1):
             ltrb2 = track2.to_ltrb()
             
-            if _check_overlap_from_boxes(ltrb1, ltrb2):
+            is_overlapped, percent1, percent2 = _check_overlap_from_boxes(ltrb1, ltrb2)
+            if is_overlapped:
                 overlapped_pairs.append((track1.track_id, track2.track_id))
                 print(f"Warning: Overlap detected between planks {track1.track_id} and {track2.track_id}")
-                # Calculate and print overlap percentages...
-                box1 = [int(x) for x in ltrb1]
-                box2 = [int(x) for x in ltrb2]
-                x_left = max(box1[0], box2[0])
-                y_top = max(box1[1], box2[1])
-                x_right = min(box1[2], box2[2])
-                y_bottom = min(box1[3], box2[3])
-                intersection_area = (x_right - x_left) * (y_bottom - y_top)
-                box1_area = (box1[2] - box1[0]) * (box1[3] - box1[1])
-                box2_area = (box2[2] - box2[0]) * (box2[3] - box2[1])
-                overlap_percent1 = (intersection_area / box1_area) * 100
-                overlap_percent2 = (intersection_area / box2_area) * 100
-                print(f"Overlap percentage: {overlap_percent1:.1f}% of plank {track1.track_id}, "
-                      f"{overlap_percent2:.1f}% of plank {track2.track_id}")
+                print(f"Overlap percentage: {percent1:.1f}% of plank {track1.track_id}, "
+                      f"{percent2:.1f}% of plank {track2.track_id}")
 
     # Continue with existing orientation processing
     for track in tracked_objects:
@@ -415,7 +406,7 @@ def draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds
     return frame
 
 def _check_overlap_from_boxes(ltrb1, ltrb2):
-    """Helper function to check overlap using the same logic as in process_frame"""
+    """Helper function to check overlap and return overlap percentages"""
     box1 = [int(x) for x in ltrb1]  # [x1, y1, x2, y2]
     box2 = [int(x) for x in ltrb2]  # [x1, y1, x2, y2]
     
@@ -433,8 +424,8 @@ def _check_overlap_from_boxes(ltrb1, ltrb2):
         overlap_percent1 = (intersection_area / box1_area) * 100
         overlap_percent2 = (intersection_area / box2_area) * 100
         
-        return overlap_percent1 > 20 or overlap_percent2 > 20
-    return False
+        return True, overlap_percent1, overlap_percent2
+    return False, 0, 0
 
 def main():
     print("Initializing camera...")
