@@ -17,7 +17,7 @@ class WarningLevel(Enum):
     ERROR = 2
 
 class ESP32Controller:
-    def __init__(self, websocket_url='ws://192.168.1.202/:81'):  # Update with your ESP32's IP
+    def __init__(self, websocket_url='ws://192.168.1.202/:81'):  # ESP32's IP
         self.websocket_url = websocket_url
         self.websocket: Optional[websockets.WebSocketClientProtocol] = None
         self.connected = False

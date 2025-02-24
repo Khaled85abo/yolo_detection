@@ -11,7 +11,6 @@ import os
 import threading
 from queue import Queue
 import logging
-import websockets
 import asyncio
 import json
 from enum import Enum, auto
@@ -171,33 +170,27 @@ def process_frame(frame, model, tracker, server):
     # Check for overlaps between all pairs of tracked objects
     for i, track1 in enumerate(tracked_objects):
         ltrb1 = track1.to_ltrb()
-        box1 = [int(x) for x in ltrb1]  # [x1, y1, x2, y2]
         
         # Check overlap with all other boxes
         for j, track2 in enumerate(tracked_objects[i+1:], i+1):
             ltrb2 = track2.to_ltrb()
-            box2 = [int(x) for x in ltrb2]  # [x1, y1, x2, y2]
             
-            # Calculate intersection
-            x_left = max(box1[0], box2[0])
-            y_top = max(box1[1], box2[1])
-            x_right = min(box1[2], box2[2])
-            y_bottom = min(box1[3], box2[3])
-            
-            if x_right > x_left and y_bottom > y_top:
-                # Calculate overlap area
+            if _check_overlap_from_boxes(ltrb1, ltrb2):
+                print(f"Warning: Overlap detected between planks {track1.track_id} and {track2.track_id}")
+                # You might want to calculate the exact overlap percentages for logging
+                box1 = [int(x) for x in ltrb1]
+                box2 = [int(x) for x in ltrb2]
+                x_left = max(box1[0], box2[0])
+                y_top = max(box1[1], box2[1])
+                x_right = min(box1[2], box2[2])
+                y_bottom = min(box1[3], box2[3])
                 intersection_area = (x_right - x_left) * (y_bottom - y_top)
                 box1_area = (box1[2] - box1[0]) * (box1[3] - box1[1])
                 box2_area = (box2[2] - box2[0]) * (box2[3] - box2[1])
-                
-                # Calculate overlap percentage for both boxes
                 overlap_percent1 = (intersection_area / box1_area) * 100
                 overlap_percent2 = (intersection_area / box2_area) * 100
-                
-                if overlap_percent1 > 20 or overlap_percent2 > 20:  # Adjust threshold as needed
-                    print(f"Warning: Overlap detected between planks {track1.track_id} and {track2.track_id}")
-                    print(f"Overlap percentage: {overlap_percent1:.1f}% of plank {track1.track_id}, "
-                          f"{overlap_percent2:.1f}% of plank {track2.track_id}")
+                print(f"Overlap percentage: {overlap_percent1:.1f}% of plank {track1.track_id}, "
+                      f"{overlap_percent2:.1f}% of plank {track2.track_id}")
 
     # Continue with existing orientation processing
     for track in tracked_objects:
@@ -290,9 +283,16 @@ def process_frame(frame, model, tracker, server):
 
     # Update server with current status
     server.update_status(
-        overlapped=[(t1.track_id, t2.track_id) for t1, t2 in final_orientations if t1[4] and t2[4]],
-        stopped=[track_id for track, (_, _, _, _, _, is_stopped) in zip(tracked_objects, final_orientations) if is_stopped],
-        incorrect=[track_id for track, (_, _, orientation, _, _, _) in zip(tracked_objects, final_orientations) if orientation == "incorrect"]
+        overlapped=[(track1.track_id, track2.track_id) 
+                   for i, track1 in enumerate(tracked_objects)
+                   for j, track2 in enumerate(tracked_objects[i+1:], i+1)
+                   if _check_overlap_from_boxes(track1.to_ltrb(), track2.to_ltrb())],
+        stopped=[track.track_id 
+                for track, (_, _, _, _, _, is_stopped) in zip(tracked_objects, final_orientations) 
+                if is_stopped],
+        incorrect=[track.track_id 
+                  for track, (_, _, orientation, _, _, _) in zip(tracked_objects, final_orientations) 
+                  if orientation == "incorrect"]
     )
 
     return tracked_objects, final_orientations, (0, frame.shape[1])
@@ -412,6 +412,28 @@ def draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds
                            cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
 
     return frame
+
+def _check_overlap_from_boxes(ltrb1, ltrb2):
+    """Helper function to check overlap using the same logic as in process_frame"""
+    box1 = [int(x) for x in ltrb1]  # [x1, y1, x2, y2]
+    box2 = [int(x) for x in ltrb2]  # [x1, y1, x2, y2]
+    
+    # Calculate intersection
+    x_left = max(box1[0], box2[0])
+    y_top = max(box1[1], box2[1])
+    x_right = min(box1[2], box2[2])
+    y_bottom = min(box1[3], box2[3])
+    
+    if x_right > x_left and y_bottom > y_top:
+        intersection_area = (x_right - x_left) * (y_bottom - y_top)
+        box1_area = (box1[2] - box1[0]) * (box1[3] - box1[1])
+        box2_area = (box2[2] - box2[0]) * (box2[3] - box2[1])
+        
+        overlap_percent1 = (intersection_area / box1_area) * 100
+        overlap_percent2 = (intersection_area / box2_area) * 100
+        
+        return overlap_percent1 > 20 or overlap_percent2 > 20
+    return False
 
 def main():
     print("Initializing camera...")
