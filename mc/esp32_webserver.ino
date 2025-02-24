@@ -10,6 +10,11 @@ const char *flask_server_ip = "http://192.168.1.249:5000/api/status";
 const char *ssid = "TN-JE3155";
 const char *password = "";
 
+// LED pins
+const int RED_LED = 2;
+const int YELLOW_LED = 3;
+const int GREEN_LED = 4;
+
 WebServer server(80);
 
 // HTML content as a string constant
@@ -116,6 +121,34 @@ void handleStatus()
     http.begin(flask_server_ip);
     int httpCode = http.GET();
     String payload = http.getString();
+    // Turn on/off the warning lights
+    // Red: for stopped planks
+    // Yellow: for overlapped planks
+    // Green: for correct planks
+    if (payload.contains("\"stop\": true"))
+    {
+        digitalWrite(RED_LED, HIGH);
+    }
+    else
+    {
+        digitalWrite(RED_LED, LOW);
+    }
+    if (payload.contains("\"overlap\": true"))
+    {
+        digitalWrite(YELLOW_LED, HIGH);
+    }
+    else
+    {
+        digitalWrite(YELLOW_LED, LOW);
+    }
+    if (payload.contains("\"incorrect\": true"))
+    {
+        digitalWrite(GREEN_LED, HIGH);
+    }
+    else
+    {
+        digitalWrite(GREEN_LED, LOW);
+    }
     http.end();
     server.send(200, "application/json", payload);
 }
@@ -124,11 +157,13 @@ void handleAcknowledge()
 {
     String type = server.arg("type");
     // Handle acknowledgment
+    // TODO: Implement acknowledgment logic with Flask server
+    Serial.println("Acknowledged: " + type);
     server.send(200, "text/plain", "OK");
 }
 
 void handleStopConveyor()
 {
-    // Implement conveyor stop logic
+    // TODO: Implement conveyor stop logic
     server.send(200, "text/plain", "OK");
 }

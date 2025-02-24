@@ -150,16 +150,34 @@ class StreamServer:
                     .controls {{ margin: 20px; }}
                     button {{ padding: 10px; margin: 5px; }}
                 </style>
+            </head>
+            <body>
+                <h1>Plank Detection System</h1>
+                {camera_feeds}
+                <div class="status" id="status">
+                    Loading status...
+                </div>
+                <div class="controls">
+                    <button onclick="controlConveyor('stop')" style="background-color: #ff4444;">Stop Conveyor</button>
+                    <button onclick="controlConveyor('start')" style="background-color: #44ff44;">Start Conveyor</button>
+                </div>
+                <div id="warnings">
+                    <div id="stopped" class="warning inactive">
+                        <h3>Stopped Plank</h3>
+                        <button onclick="acknowledge('stopped')">Acknowledge</button>
+                    </div>
+                </div>
                 <script>
                     function updateStatus() {{
                         fetch('/api/status')
                             .then(response => response.json())
                             .then(data => {{
+                                console.log(data);
                                 document.getElementById('status').innerHTML = `
                                     <p>Conveyor Status: <strong>${{data.conveyor_status}}</strong></p>
-                                    <p class="warning">Overlapped Planks: ${{data.overlap.join(', ') || 'None'}}</p>
-                                    <p class="warning">Stopped Planks: ${{data.stop.join(', ') || 'None'}}</p>
-                                    <p class="warning">Incorrect Planks: ${{data.incorrect.join(', ') || 'None'}}</p>
+                                    <p>Overlapped Planks: <strong>${{data.overlap ? 'Yes' : 'No'}}</strong></p>
+                                    <p>Stopped Planks: <strong>${{data.stop ? 'Yes' : 'No'}}</strong></p>
+                                    <p>Incorrect Planks: <strong>${{data.incorrect ? 'Yes' : 'No'}}</strong></p>
                                 `;
                             }});
                     }}
@@ -177,17 +195,6 @@ class StreamServer:
                     // Update status every second
                     setInterval(updateStatus, 1000);
                 </script>
-            </head>
-            <body>
-                <h1>Plank Detection System</h1>
-                {camera_feeds}
-                <div class="status" id="status">
-                    Loading status...
-                </div>
-                <div class="controls">
-                    <button onclick="controlConveyor('stop')" style="background-color: #ff4444;">Stop Conveyor</button>
-                    <button onclick="controlConveyor('start')" style="background-color: #44ff44;">Start Conveyor</button>
-                </div>
             </body>
         </html>
         """
