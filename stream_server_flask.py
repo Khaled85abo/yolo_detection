@@ -32,6 +32,7 @@
 
 
 from flask import Flask, Response, jsonify, request
+from flask_socketio import SocketIO, emit
 import cv2
 import threading
 from queue import Queue
@@ -44,7 +45,7 @@ class PlankStatus:
         self.overlap: List[tuple] = []
         self.stop: List[int] = []
         self.incorrect: List[int] = []
-        self.conveyor_status: str = "running"
+        self.conveyor_status: str = "start"
 
 class StreamServer:
     _instance = None
@@ -55,6 +56,14 @@ class StreamServer:
             if cls._instance is None:
                 cls._instance = super(StreamServer, cls).__new__(cls)
                 cls._instance.app = Flask(__name__)
+                cls._instance.socketio = SocketIO(
+                    cls._instance.app, 
+                    cors_allowed_origins="*", 
+                    async_mode='eventlet',
+                    ping_timeout=20,
+                    ping_interval=10,
+                    path='/ws'  # Add this to match ESP32's WebSocket path
+                )
                 cls._instance.cameras = {}
                 cls._instance.frame_locks = {}
                 cls._instance.plank_status = PlankStatus()
@@ -65,12 +74,58 @@ class StreamServer:
                 cls._instance.app.route('/api/status', methods=['GET'])(cls._instance.get_status)
                 cls._instance.app.route('/api/control', methods=['POST'])(cls._instance.control_conveyor)
                 
+                # Add socketio routes
+                cls._instance.socketio.on_event('connect', cls._instance.on_connect)
+                cls._instance.socketio.on_event('disconnect', cls._instance.on_disconnect)
+                cls._instance.socketio.on_event('control_conveyor', cls._instance.on_control_conveyor) #send conveyor action to esp32
+                cls._instance.socketio.on_event('update_conveyor_status',cls._instance.update_conveyor_status) #get conveyor status from esp32
+                cls._instance.socketio.on_event('status_update', cls._instance.emit_status) #emit status to esp32
+
+                
+
             return cls._instance
 
     def __init__(self):
         # Skip initialization if already done
         pass
-    
+
+    def on_connect(self):
+        """Handle client connection"""
+        print("Client connected")
+        # Emit initial status immediately after connection
+        self.emit_status()
+
+    def on_disconnect(self):
+        print("Client disconnected")
+
+    def on_control_conveyor(self):
+        """Send conveyor status to ESP32"""
+        action = request.json.get('action')
+        self.socketio.emit('update_conveyor_status', action)
+
+    def emit_status(self):
+        """Emit status to all connected clients"""
+        try:
+            status = self.get_status()
+            self.socketio.emit('status_update', status.json)  # Use .json to get the JSON data from jsonify response
+        except Exception as e:
+            print(f"Error emitting status: {e}")
+
+    def update_conveyor_status(self):
+        """Update conveyor status from ESP32"""
+        try:
+            data = request.get_json()  # Get the raw JSON data
+            print("Control update received:", data)
+            if isinstance(data, dict) and 'action' in data:
+                self.plank_status.conveyor_status = data['action']  # Use 'action' directly from the JSON
+                self.emit_status()  # Emit the updated status to all clients
+                return jsonify({'status': 'success', 'conveyor_status': self.plank_status.conveyor_status})
+            else:
+                return jsonify({'status': 'error', 'message': 'Invalid data format'})
+        except Exception as e:
+            print(f"Error in update_conveyor_status: {e}")
+            return jsonify({'status': 'error', 'message': str(e)})
+
     def add_camera(self, camera_id, frame_size=(640, 480)):
         """Add a new camera feed"""
         self.cameras[camera_id] = None
@@ -109,15 +164,18 @@ class StreamServer:
     
     def update_status(self, overlapped=None, stopped=None, incorrect=None):
         """Update the status of planks"""
+        print("Updating status:", overlapped, stopped, incorrect)
         if overlapped is not None:
             self.plank_status.overlap = overlapped
         if stopped is not None:
             self.plank_status.stop = stopped
         if incorrect is not None:
             self.plank_status.incorrect = incorrect
+        self.emit_status()
 
     def get_status(self):
         """API endpoint to get current status"""
+        print("Getting status:", self.plank_status.overlap, self.plank_status.stop, self.plank_status.incorrect)
         return jsonify({
             'overlap': False if len(self.plank_status.overlap) == 0 else True,
             'stop': False if len(self.plank_status.stop) == 0 else True,
@@ -129,7 +187,7 @@ class StreamServer:
         """API endpoint to control conveyor"""
         action = request.json.get('action')
         if action in ['stop', 'start']:
-            self.plank_status.conveyor_status = 'stopped' if action == 'stop' else 'running'
+            self.plank_status.conveyor_status = 'stop' if action == 'stop' else 'start'
             # Here you would add actual conveyor control logic
             return jsonify({'status': 'success', 'conveyor_status': self.plank_status.conveyor_status})
         return jsonify({'status': 'error', 'message': 'Invalid action'})
@@ -168,6 +226,13 @@ class StreamServer:
                     </div>
                 </div>
                 <script>
+                    socket = io();
+                    socket.on('connect', function() {{
+                        console.log('Connected to server');
+                    }});
+                    socket.on('disconnect', function() {{
+                        console.log('Disconnected from server');
+                    }});
                     function updateStatus() {{
                         fetch('/api/status')
                             .then(response => response.json())
@@ -181,19 +246,24 @@ class StreamServer:
                                 `;
                             }});
                     }}
+                    socket.on('emit_status', function(data) {{
+                        updateStatus(data);
+                    }});
 
                     function controlConveyor(action) {{
-                        fetch('/api/control', {{
-                            method: 'POST',
-                            headers: {{ 'Content-Type': 'application/json' }},
-                            body: JSON.stringify({{ action: action }})
-                        }})
-                        .then(response => response.json())
-                        .then(data => updateStatus());
+                        console.log("Control conveyor action:", action);
+                        socket.emit('update_conveyor_status', {{ action: action }});
+                        // fetch('/api/control', {{
+                        //     method: 'POST',
+                        //     headers: {{ 'Content-Type': 'application/json' }},
+                        //     body: JSON.stringify({{ action: action }})
+                        // }})
+                        // .then(response => response.json())
+                        // .then(data => updateStatus());
                     }}
 
                     // Update status every second
-                    setInterval(updateStatus, 1000);
+                    // setInterval(updateStatus, 1000);
                 </script>
             </body>
         </html>
@@ -206,10 +276,11 @@ class StreamServer:
         self.app.run(host=host, port=port, debug=False, use_reloader=False)
     
     def run_threaded(self, host='0.0.0.0', port=5000):
-        """Run the Flask server in a separate thread"""
+        """Run the Flask server with SocketIO in a separate thread"""
         server_thread = threading.Thread(
-            target=self.run,
-            args=(host, port)
+            target=self.socketio.run,
+            args=(self.app,),
+            kwargs={'host': host, 'port': port, 'debug': False, 'use_reloader': False}
         )
         server_thread.daemon = True
         server_thread.start()

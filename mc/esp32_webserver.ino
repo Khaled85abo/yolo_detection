@@ -3,6 +3,7 @@
 #include <SPIFFS.h>
 #include <HTTPClient.h>
 #include <WebSocketsClient.h>
+#include <ArduinoJson.h>
 
 // Flask server IP address
 const char *flask_server_ip = "http://192.168.1.249:5000/api/status";
@@ -23,7 +24,7 @@ WebSocketsClient webSocket;
 
 // Update Flask server details
 const char *ws_server = "192.168.1.249";
-const int ws_port = 8765; // Typical WebSocket port, adjust as needed
+const int ws_port = 5000; // Change to Flask's port (5000)
 
 // Add WebSocket event handler
 void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
@@ -37,21 +38,63 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         Serial.println("WebSocket Connected!");
         break;
     case WStype_TEXT:
-        // Handle incoming WebSocket message
-        String message = String((char *)payload);
-        handleStatusUpdate(message);
-        // Forward the status to connected web clients
-        server.send(200, "application/json", message);
+        Serial.printf("[WSS] Received text: %s\n", payload);
+        StaticJsonDocument<200> doc;
+        DeserializationError error = deserializeJson(doc, payload);
+
+        if (error)
+        {
+            Serial.print("deserializeJson() failed: ");
+            Serial.println(error.c_str());
+            return;
+        }
+
+        // Check if it's a conveyor control message
+        if (doc.containsKey("action"))
+        {
+            const char *action = doc["action"];
+            Serial.print("Conveyor action received: ");
+            Serial.println(action);
+
+            if (strcmp(action, "stop") == 0)
+            {
+                // Handle stop action
+                Serial.println("Stopping conveyor");
+                // Add your conveyor stop logic here
+                // TODO: Implement conveyor stop logic
+
+                // Confirm the status back to Flask
+                webSocket.sendTXT("{\"action\": \"stop\"}");
+            }
+            else if (strcmp(action, "start") == 0)
+            {
+                // Handle start action
+                Serial.println("Starting conveyor");
+                // Add your conveyor start logic here
+                // TODO: Implement conveyor start logic
+
+                // Confirm the status back to Flask
+                webSocket.sendTXT("{\"action\": \"start\"}");
+            }
+        }
+        // Check if it's a status update
+        else if (doc.containsKey("stop") || doc.containsKey("overlap") || doc.containsKey("incorrect"))
+        {
+            handleStatusUpdate(doc);
+            // Forward the status to connected web clients
+            String message = String((char *)payload);
+            server.send(200, "application/json", message);
+        }
         break;
     }
 }
 
-void handleStatusUpdate(String payload)
+void handleStatusUpdate(const JsonDocument &doc)
 {
-    // Update LED states based on received payload
-    digitalWrite(RED_LED, payload.indexOf("\"stop\": true") > -1 ? HIGH : LOW);
-    digitalWrite(YELLOW_LED, payload.indexOf("\"overlap\": true") > -1 ? HIGH : LOW);
-    digitalWrite(GREEN_LED, payload.indexOf("\"incorrect\": true") > -1 ? HIGH : LOW);
+    // Update LED states based on JSON values
+    digitalWrite(RED_LED, doc["stop"] ? HIGH : LOW);
+    digitalWrite(YELLOW_LED, doc["overlap"] ? HIGH : LOW);
+    digitalWrite(GREEN_LED, doc["incorrect"] ? HIGH : LOW);
 }
 
 // HTML content as a string constant
@@ -141,7 +184,7 @@ void setup()
     Serial.println(WiFi.localIP());
 
     // Initialize WebSocket connection
-    webSocket.begin(ws_server, ws_port, "/ws");
+    webSocket.begin(ws_server, ws_port, "/ws"); // Make sure path matches Flask's
     webSocket.onEvent(webSocketEvent);
     webSocket.setReconnectInterval(3000);
 
@@ -218,6 +261,6 @@ void handleAcknowledge()
 
 void handleStopConveyor()
 {
-    // TODO: Implement conveyor stop logic
+    webSocket.sendTXT("{\"action\": \"stop\"}");
     server.send(200, "text/plain", "OK");
 }
