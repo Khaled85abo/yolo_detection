@@ -11,7 +11,7 @@ const char *ssid = "TN-JE3155";
 const char *password = "";
 
 // LED pins
-const int RED_LED = 2;
+const int RED_LED = 19;
 const int YELLOW_LED = 4;
 const int GREEN_LED = 5;
 
@@ -94,9 +94,53 @@ bool redLedActive = false;
 bool yellowLedActive = false;
 bool greenLedActive = false;
 
+String fetchStatusFromServer()
+{
+    HTTPClient http;
+    http.begin(flask_server_ip);
+    int httpCode = http.GET();
+    String payload = http.getString();
+    http.end();
+
+    if (httpCode != 200)
+    {
+        payload = "{\"stop\": true, \"overlap\": true, \"incorrect\": true}";
+    }
+    return payload;
+}
+
+void checkStatus()
+{
+    String payload = fetchStatusFromServer();
+
+    // Update LED states based on status
+    redLedActive = payload.indexOf("\"stop\": true") > -1;
+    yellowLedActive = payload.indexOf("\"overlap\": true") > -1;
+    greenLedActive = payload.indexOf("\"incorrect\": true") > -1;
+
+    // Turn off LEDs if they're not active
+    if (!redLedActive)
+        digitalWrite(RED_LED, LOW);
+    if (!yellowLedActive)
+        digitalWrite(YELLOW_LED, LOW);
+    if (!greenLedActive)
+        digitalWrite(GREEN_LED, LOW);
+}
+
+void handleStatus()
+{
+    String payload = fetchStatusFromServer();
+    server.send(200, "application/json", payload);
+}
+
 void setup()
 {
     Serial.begin(115200);
+
+    // Set LED pins as outputs
+    pinMode(RED_LED, OUTPUT);
+    pinMode(YELLOW_LED, OUTPUT);
+    pinMode(GREEN_LED, OUTPUT);
 
     // Connect to Wi-Fi
     WiFi.begin(ssid, password);
@@ -147,48 +191,6 @@ void loop()
         if (greenLedActive)
             digitalWrite(GREEN_LED, ledState);
     }
-}
-
-void checkStatus()
-{
-    HTTPClient http;
-    http.begin(flask_server_ip);
-    int httpCode = http.GET();
-    String payload = http.getString();
-    if (httpCode != 200)
-    {
-        payload = "{\"stop\": false, \"overlap\": false, \"incorrect\": true}";
-    }
-
-    // Update LED states based on status
-    redLedActive = payload.indexOf("\"stop\": true") > -1;
-    yellowLedActive = payload.indexOf("\"overlap\": true") > -1;
-    greenLedActive = payload.indexOf("\"incorrect\": true") > -1;
-
-    // Turn off LEDs if they're not active
-    if (!redLedActive)
-        digitalWrite(RED_LED, LOW);
-    if (!yellowLedActive)
-        digitalWrite(YELLOW_LED, LOW);
-    if (!greenLedActive)
-        digitalWrite(GREEN_LED, LOW);
-
-    http.end();
-}
-
-void handleStatus()
-{
-    // Get status from Flask server
-    HTTPClient http;
-    http.begin(flask_server_ip);
-    int httpCode = http.GET();
-    String payload = http.getString();
-    if (httpCode != 200)
-    {
-        payload = "{\"stop\": false, \"overlap\": false, \"incorrect\": true}";
-    }
-    http.end();
-    server.send(200, "application/json", payload);
 }
 
 void handleAcknowledge()
