@@ -1,8 +1,8 @@
 #include <WiFi.h>
 #include <WebServer.h>
-#include <SPIFFS.h>
+// #include <SPIFFS.h>
 #include <HTTPClient.h>
-#include <WebSocketsClient.h>
+#include <SocketIOclient.h>
 #include <ArduinoJson.h>
 
 // Flask server IP address
@@ -13,32 +13,46 @@ const char *ssid = "TN-JE3155";
 const char *password = "";
 
 // LED pins
-const int RED_LED = 2;
-const int YELLOW_LED = 3;
-const int GREEN_LED = 4;
+const int RED_LED = 19;
+const int YELLOW_LED = 4;
+const int GREEN_LED = 5;
+const int CONVEYOR_STOP_PIN = 22;
 
 WebServer server(80);
 
-// Add WebSocket client instance
-WebSocketsClient webSocket;
+// Replace WebSocketsClient with SocketIOclient
+SocketIOclient socketIO;
 
 // Update Flask server details
 const char *ws_server = "192.168.1.249";
 const int ws_port = 5000; // Change to Flask's port (5000)
+unsigned long lastStatusCheck = 0;
+unsigned long lastBlinkTime = 0;
+const unsigned long STATUS_CHECK_INTERVAL = 1000; // Check every 1 second
+const unsigned long BLINK_INTERVAL = 250;         // Blink every 250ms
+bool ledState = false;
 
-// Add WebSocket event handler
-void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
+// Global variables to store LED states
+bool redLedActive = false;
+bool yellowLedActive = false;
+bool greenLedActive = false;
+bool conveyorStopActive = false;
+
+// Update WebSocket event handler to handle Socket.IO events
+void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length)
 {
     switch (type)
     {
-    case WStype_DISCONNECTED:
-        Serial.println("WebSocket Disconnected!");
+    case sIOtype_DISCONNECT:
+        Serial.println("Socket.IO Disconnected!");
         break;
-    case WStype_CONNECTED:
-        Serial.println("WebSocket Connected!");
+    case sIOtype_CONNECT:
+        Serial.println("Socket.IO Connected!");
+        // Join default namespace
+        socketIO.send(sIOtype_CONNECT, "/");
         break;
-    case WStype_TEXT:
-        Serial.printf("[WSS] Received text: %s\n", payload);
+    case sIOtype_EVENT:
+        Serial.printf("[IOc] Event: %s\n", payload);
         StaticJsonDocument<200> doc;
         DeserializationError error = deserializeJson(doc, payload);
 
@@ -49,41 +63,11 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             return;
         }
 
-        // Check if it's a conveyor control message
-        if (doc.containsKey("action"))
+        // Socket.IO events come as arrays where first element is event name
+        const char *event = doc[0];
+        if (strcmp(event, "status_update") == 0)
         {
-            const char *action = doc["action"];
-            Serial.print("Conveyor action received: ");
-            Serial.println(action);
-
-            if (strcmp(action, "stop") == 0)
-            {
-                // Handle stop action
-                Serial.println("Stopping conveyor");
-                // Add your conveyor stop logic here
-                // TODO: Implement conveyor stop logic
-
-                // Confirm the status back to Flask
-                webSocket.sendTXT("{\"action\": \"stop\"}");
-            }
-            else if (strcmp(action, "start") == 0)
-            {
-                // Handle start action
-                Serial.println("Starting conveyor");
-                // Add your conveyor start logic here
-                // TODO: Implement conveyor start logic
-
-                // Confirm the status back to Flask
-                webSocket.sendTXT("{\"action\": \"start\"}");
-            }
-        }
-        // Check if it's a status update
-        else if (doc.containsKey("stop") || doc.containsKey("overlap") || doc.containsKey("incorrect"))
-        {
-            handleStatusUpdate(doc);
-            // Forward the status to connected web clients
-            String message = String((char *)payload);
-            server.send(200, "application/json", message);
+            handleStatusUpdate(doc[1]);
         }
         break;
     }
@@ -95,6 +79,7 @@ void handleStatusUpdate(const JsonDocument &doc)
     digitalWrite(RED_LED, doc["stop"] ? HIGH : LOW);
     digitalWrite(YELLOW_LED, doc["overlap"] ? HIGH : LOW);
     digitalWrite(GREEN_LED, doc["incorrect"] ? HIGH : LOW);
+    digitalWrite(CONVEYOR_STOP_PIN, doc["conveyor_status"] == "stop" ? HIGH : LOW);
 }
 
 // HTML content as a string constant
@@ -106,13 +91,13 @@ const char index_html[] PROGMEM = R"rawliteral(
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         .warning { padding: 10px; margin: 5px; border-radius: 5px; }
-        .active { background-color: #ffcccc; animation: blink 1s infinite; }
-        .inactive { background-color: #ccffcc; }
+        .active { background-color: #ff4444; animation: blink 1s infinite; }
+        .inactive { background-color: #90EE90; }
         button { padding: 10px; margin: 5px; width: 100%; }
         @keyframes blink {
-            0% { background-color: #ccffcc; }
-            50% { background-color: #ffcccc; }
-            100% { background-color: #ccffcc; }
+            0% { background-color: #90EE90; }
+            50% { background-color: #ff4444; }
+            100% { background-color: #90EE90; }
         }
         .blink { animation: blink 1s infinite; }
     </style>
@@ -122,47 +107,50 @@ const char index_html[] PROGMEM = R"rawliteral(
     <div id="warnings">
         <div id="stopped" class="warning inactive">
             <h3>Stopped Plank</h3>
-            <button onclick="acknowledge('stopped')">Acknowledge</button>
         </div>
         <div id="overlap" class="warning inactive">
             <h3>Overlapped Planks</h3>
-            <button onclick="acknowledge('overlap')">Acknowledge</button>
         </div>
         <div id="incorrect" class="warning inactive">
             <h3>Incorrect Orientation</h3>
-            <button onclick="acknowledge('incorrect')">Acknowledge</button>
         </div>
     </div>
-    <button onclick="stopConveyor()" style="background-color: #ff6666;">STOP CONVEYOR</button>
     <script>
-        const ws = new WebSocket('ws://192.168.1.249:8765/ws');
+        // const ws = new WebSocket('ws://192.168.1.249:5000/ws');
         
-        ws.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            console.log(data);
-            updateWarning('stopped', data.stop);
-            updateWarning('overlap', data.overlap);
-            updateWarning('incorrect', data.incorrect);
-        };
+        // ws.onmessage = function(event) {
+        //     const data = JSON.parse(event.data);
+        //     console.log(data);
+        //     updateWarning('stopped', data.stop);
+        //     updateWarning('overlap', data.overlap);
+        //     updateWarning('incorrect', data.incorrect);
+        // };
 
-        ws.onclose = function() {
-            console.log('WebSocket connection closed');
-            // Attempt to reconnect
-            setTimeout(function() {
-                location.reload();
-            }, 5000);
-        };
+        // ws.onclose = function() {
+        //     console.log('WebSocket connection closed');
+        //     // Attempt to reconnect
+        //     setTimeout(function() {
+        //         location.reload();
+        //     }, 5000);
+        // };
+        function updateStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    updateWarning('stopped', data.stop);
+                    updateWarning('overlap', data.overlap);
+                    updateWarning('incorrect', data.incorrect);
+                });
+        }
 
         function updateWarning(type, active) {
             const element = document.getElementById(type);
             element.className = 'warning ' + (active ? 'active' : 'inactive');
         }
-        function acknowledge(type) {
-            fetch('/api/acknowledge?type=' + type, { method: 'POST' });
-        }
-        function stopConveyor() {
-            fetch('/api/stop-conveyor', { method: 'POST' });
-        }
+
+        setInterval(updateStatus, 1000);
+
     </script>
 </body>
 </html>
@@ -183,84 +171,83 @@ void setup()
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
 
-    // Initialize WebSocket connection
-    webSocket.begin(ws_server, ws_port, "/ws"); // Make sure path matches Flask's
-    webSocket.onEvent(webSocketEvent);
-    webSocket.setReconnectInterval(3000);
+    // Initialize Socket.IO connection
+    socketIO.begin(ws_server, ws_port);
+    socketIO.onEvent(socketIOEvent);
+
+    // Set LED pins as outputs
+    pinMode(RED_LED, OUTPUT);
+    pinMode(YELLOW_LED, OUTPUT);
+    pinMode(GREEN_LED, OUTPUT);
+    pinMode(CONVEYOR_STOP_PIN, OUTPUT);
 
     // Route for root / web page
     server.on("/", HTTP_GET, []()
               { server.send(200, "text/html", index_html); });
 
     // Route for API endpoints
-    server.on("/api/status", HTTP_GET, handleStatus);
-    server.on("/api/acknowledge", HTTP_POST, handleAcknowledge);
-    server.on("/api/stop-conveyor", HTTP_POST, handleStopConveyor);
+    server.on("/api/status", HTTP_GET, getStatus);
 
     server.begin();
 }
 
 void loop()
 {
-    webSocket.loop();
+    socketIO.loop();
     server.handleClient();
+    // Check status periodically
+    unsigned long currentMillis = millis();
+    if (currentMillis - lastStatusCheck >= STATUS_CHECK_INTERVAL)
+    {
+        lastStatusCheck = currentMillis;
+        getStatus();
+    }
+
+    // Handle LED blinking
+    if (currentMillis - lastBlinkTime >= BLINK_INTERVAL)
+    {
+        lastBlinkTime = currentMillis;
+        ledState = !ledState;
+
+        // Update LEDs based on their active state
+        if (redLedActive)
+            digitalWrite(RED_LED, ledState);
+        if (yellowLedActive)
+            digitalWrite(YELLOW_LED, ledState);
+        if (greenLedActive)
+            digitalWrite(GREEN_LED, ledState);
+        if (conveyorStopActive)
+            digitalWrite(CONVEYOR_STOP_PIN, ledState);
+    }
 }
 
-void handleStatus()
+String fetchStatusFromServer()
 {
-    // Get status from Flask server
-    // if server is not reachable, use fake data
     HTTPClient http;
     http.begin(flask_server_ip);
     int httpCode = http.GET();
     String payload = http.getString();
+    http.end();
+
     if (httpCode != 200)
     {
-        payload = "{\"stop\": false, \"overlap\": false, \"incorrect\": true}";
+        payload = "{\"stop\": true, \"overlap\": true, \"incorrect\": true}";
     }
-    // Turn on/off the warning lights
-    // Red: for stopped planks
-    // Yellow: for overlapped planks
-    // Green: for correct planks
-    if (payload.indexOf("\"stop\": true") > -1)
-    {
-        digitalWrite(RED_LED, HIGH);
-    }
-    else
-    {
-        digitalWrite(RED_LED, LOW);
-    }
-    if (payload.indexOf("\"overlap\": true") > -1)
-    {
-        digitalWrite(YELLOW_LED, HIGH);
-    }
-    else
-    {
-        digitalWrite(YELLOW_LED, LOW);
-    }
-    if (payload.indexOf("\"incorrect\": true") > -1)
-    {
-        digitalWrite(GREEN_LED, HIGH);
-    }
-    else
-    {
-        digitalWrite(GREEN_LED, LOW);
-    }
-    http.end();
-    server.send(200, "application/json", payload);
+    return payload;
 }
-
-void handleAcknowledge()
+void getStatus()
 {
-    String type = server.arg("type");
-    // Handle acknowledgment
-    // TODO: Implement acknowledgment logic with Flask server
-    Serial.println("Acknowledged: " + type);
-    server.send(200, "text/plain", "OK");
-}
+    String payload = fetchStatusFromServer();
 
-void handleStopConveyor()
-{
-    webSocket.sendTXT("{\"action\": \"stop\"}");
-    server.send(200, "text/plain", "OK");
+    // Create a JSON document
+    StaticJsonDocument<200> doc;
+    DeserializationError error = deserializeJson(doc, payload);
+
+    if (error)
+    {
+        Serial.print("JSON parsing failed: ");
+        Serial.println(error.c_str());
+        return;
+    }
+    handleStatusUpdate(doc);
 }
