@@ -8,34 +8,6 @@
 // incorrect =1
 // overlap = 2
 // stop= 4
-// Each mask represents a bit position using binary notation
-// const uint8_t INCORRECT_MASK = 0b001; // Binary: 001 (Decimal: 1)
-// const uint8_t OVERLAP_MASK = 0b010;   // Binary: 010 (Decimal: 2)
-// const uint8_t STOP_MASK = 0b100;      // Binary: 100 (Decimal: 4)
-
-// void checkStatus()
-// {
-//     HTTPClient http;
-//     http.begin(flask_server_ip);
-//     int httpCode = http.GET();
-
-//     // Get the status as a single number
-//     uint8_t status = (httpCode != 200) ? 7 : http.getString().toInt(); // 7 = all flags set in error case
-//     http.end();
-
-//     // Use bitwise AND to check each state
-//     greenLedActive = status & INCORRECT_MASK; // Check bit 0
-//     yellowLedActive = status & OVERLAP_MASK;  // Check bit 1
-//     redLedActive = status & STOP_MASK;        // Check bit 2
-
-//     // Turn off LEDs if they're not active
-//     if (!redLedActive)
-//         digitalWrite(RED_LED, LOW);
-//     if (!yellowLedActive)
-//         digitalWrite(YELLOW_LED, LOW);
-//     if (!greenLedActive)
-//         digitalWrite(GREEN_LED, LOW);
-// }
 
 // Flask server IP address
 const char *flask_server_ip = "http://192.168.1.249:5000/api/status";
@@ -123,47 +95,67 @@ const unsigned long STATUS_CHECK_INTERVAL = 1000; // Check every 1 second
 const unsigned long BLINK_INTERVAL = 250;         // Blink every 250ms
 bool ledState = false;
 
+// Bitwise system explanation:
+// We use 3 bits to represent 3 states, where each bit position represents a specific state
+// Bit positions: 0b(stop)(overlap)(incorrect)
+// Example: 0b101 means stop=1, overlap=0, incorrect=1
+// This allows us to represent all combinations with a single number (0-7)
+
+// Define bit masks for each state using binary notation
+const uint8_t INCORRECT_MASK = 0b001; // Binary: 001 (Decimal: 1) - Rightmost bit
+const uint8_t OVERLAP_MASK = 0b010;   // Binary: 010 (Decimal: 2) - Middle bit
+const uint8_t STOP_MASK = 0b100;      // Binary: 100 (Decimal: 4) - Leftmost bit
+
+// Truth table for reference:
+// Status | Binary | Incorrect | Overlap | Stop
+// 0      | 000    | false     | false   | false
+// 1      | 001    | true      | false   | false
+// 2      | 010    | false     | true    | false
+// 3      | 011    | true      | true    | false
+// 4      | 100    | false     | false   | true
+// 5      | 101    | true      | false   | true
+// 6      | 110    | false     | true    | true
+// 7      | 111    | true      | true    | true
+
 // Global variables to store LED states
-bool redLedActive = false;
-bool yellowLedActive = false;
-bool greenLedActive = false;
+bool redLedActive = false;    // Maps to stop bit
+bool yellowLedActive = false; // Maps to overlap bit
+bool greenLedActive = false;  // Maps to incorrect bit
 
 String fetchStatusFromServer()
 {
     HTTPClient http;
     http.begin(flask_server_ip);
     int httpCode = http.GET();
-    String payload = http.getString();
-    http.end();
+    String payload;
 
     if (httpCode != 200)
     {
-        payload = "{\"stop\": true, \"overlap\": true, \"incorrect\": true}";
+        payload = "7"; // Return 7 (binary 111) to indicate all errors active
     }
+    else
+    {
+        payload = http.getString(); // Expect a single number 0-7 from server
+    }
+    http.end();
     return payload;
 }
 
 void checkStatus()
 {
-    String payload = fetchStatusFromServer();
+    // Convert string response to integer (0-7)
+    uint8_t status = fetchStatusFromServer().toInt();
 
-    // Create a JSON document
-    StaticJsonDocument<200> doc;
-    DeserializationError error = deserializeJson(doc, payload);
+    // Use bitwise AND (&) to check if each bit is set
+    // Example: if status = 5 (binary 101)
+    // 101 & 001 = 001 (true for incorrect)
+    // 101 & 010 = 000 (false for overlap)
+    // 101 & 100 = 100 (true for stop)
+    greenLedActive = status & INCORRECT_MASK; // Check rightmost bit
+    yellowLedActive = status & OVERLAP_MASK;  // Check middle bit
+    redLedActive = status & STOP_MASK;        // Check leftmost bit
 
-    if (error)
-    {
-        Serial.print("JSON parsing failed: ");
-        Serial.println(error.c_str());
-        return;
-    }
-
-    // Update LED states based on parsed JSON
-    redLedActive = doc["stop"].as<bool>();
-    yellowLedActive = doc["overlap"].as<bool>();
-    greenLedActive = doc["incorrect"].as<bool>();
-
-    // Turn off LEDs if they're not active
+    // Turn off LEDs if their corresponding bit is not set
     if (!redLedActive)
         digitalWrite(RED_LED, LOW);
     if (!yellowLedActive)
@@ -174,8 +166,15 @@ void checkStatus()
 
 void handleStatus()
 {
-    String payload = fetchStatusFromServer();
-    server.send(200, "application/json", payload);
+    // Get status number from server
+    uint8_t status = fetchStatusFromServer().toInt();
+
+    // Convert numeric status back to JSON for web interface
+    // Using bitwise AND to check each state
+    String jsonResponse = "{\"incorrect\":" + String((status & INCORRECT_MASK) ? "true" : "false") +
+                          ",\"overlap\":" + String((status & OVERLAP_MASK) ? "true" : "false") +
+                          ",\"stop\":" + String((status & STOP_MASK) ? "true" : "false") + "}";
+    server.send(200, "application/json", jsonResponse);
 }
 
 void setup()

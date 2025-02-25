@@ -143,7 +143,7 @@ void setup()
     // Initialize WebSocket connection
     webSocket.begin(ws_server, ws_port, "/ws");
     webSocket.onEvent(webSocketEvent);
-    webSocket.setReconnectInterval(5000);
+    webSocket.setReconnectInterval(3000);
 
     // Route for root / web page
     server.on("/", HTTP_GET, []()
