@@ -2,6 +2,7 @@
 #include <WebServer.h>
 // #include <SPIFFS.h>
 #include <HTTPClient.h>
+#include <ArduinoJson.h>
 
 // Flask server IP address
 const char *flask_server_ip = "http://192.168.1.249:5000/api/status";
@@ -113,10 +114,21 @@ void checkStatus()
 {
     String payload = fetchStatusFromServer();
 
-    // Update LED states based on status
-    redLedActive = payload.indexOf("\"stop\": true") > -1;
-    yellowLedActive = payload.indexOf("\"overlap\": true") > -1;
-    greenLedActive = payload.indexOf("\"incorrect\": true") > -1;
+    // Create a JSON document
+    StaticJsonDocument<200> doc;
+    DeserializationError error = deserializeJson(doc, payload);
+
+    if (error)
+    {
+        Serial.print("JSON parsing failed: ");
+        Serial.println(error.c_str());
+        return;
+    }
+
+    // Update LED states based on parsed JSON
+    redLedActive = doc["stop"].as<bool>();
+    yellowLedActive = doc["overlap"].as<bool>();
+    greenLedActive = doc["incorrect"].as<bool>();
 
     // Turn off LEDs if they're not active
     if (!redLedActive)

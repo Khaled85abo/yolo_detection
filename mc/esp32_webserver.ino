@@ -179,7 +179,7 @@ void handleStatus()
     // Red: for stopped planks
     // Yellow: for overlapped planks
     // Green: for correct planks
-    if (payload.contains("\"stop\": true"))
+    if (payload.indexOf("\"stop\": true") > -1)
     {
         digitalWrite(RED_LED, HIGH);
     }
@@ -187,7 +187,7 @@ void handleStatus()
     {
         digitalWrite(RED_LED, LOW);
     }
-    if (payload.contains("\"overlap\": true"))
+    if (payload.indexOf("\"overlap\": true") > -1)
     {
         digitalWrite(YELLOW_LED, HIGH);
     }
@@ -195,7 +195,7 @@ void handleStatus()
     {
         digitalWrite(YELLOW_LED, LOW);
     }
-    if (payload.contains("\"incorrect\": true"))
+    if (payload.indexOf("\"incorrect\": true") > -1)
     {
         digitalWrite(GREEN_LED, HIGH);
     }
