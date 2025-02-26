@@ -283,18 +283,18 @@ class StreamServer:
     
     def run_threaded(self, host='0.0.0.0', port=5000):
         """Run the Flask server with SocketIO in a separate thread"""
-        # server_thread = threading.Thread(
-        #     target=self.socketio.run,
-        #     args=(self.app,),
-        #     kwargs={'host': host, 'port': port, 'debug': False, 'use_reloader': False}
-        # )
-        # server_thread.daemon = True
-        # server_thread.start()
-        # return server_thread
-        self.socketio.run(
-            self.app,
-            host=host, 
-            port=port, 
-            debug=False, 
-            use_reloader=False
+        server_thread = threading.Thread(
+            target=self.socketio.run,
+            args=(self.app,),
+            kwargs={'host': host, 'port': port, 'debug': False, 'use_reloader': False}
         )
+        server_thread.daemon = True
+        server_thread.start()
+        return server_thread
+        # self.socketio.run(
+        #     self.app,
+        #     host=host, 
+        #     port=port, 
+        #     debug=False, 
+        #     use_reloader=False
+        # )
