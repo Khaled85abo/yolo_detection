@@ -169,8 +169,17 @@ void setup()
 
 void loop()
 {
-    socketIO.loop(); // This handles incoming Socket.IO events
+    socketIO.loop();
     server.handleClient();
+
+    // Check if we need to reconnect
+    static unsigned long lastReconnectAttempt = 0;
+    if (!connected && (millis() - lastReconnectAttempt > 5000))
+    {
+        lastReconnectAttempt = millis();
+        Serial.println("Attempting to reconnect to Socket.IO...");
+        socketIO.begin(ws_server, ws_port, ws_path);
+    }
 
     // Handle LED blinking
     unsigned long currentMillis = millis();
