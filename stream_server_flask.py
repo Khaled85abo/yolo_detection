@@ -232,9 +232,15 @@ class StreamServer:
                         console.log('Connected to server');
                         updateStatus();
                     }});
+
                     socket.on('disconnect', function() {{
                         console.log('Disconnected from server');
                     }});
+
+                    socket.on('status_update', function(data) {{
+                        updateStatus(data);
+                    }});
+
                     function updateStatus() {{
                         fetch('/api/status')
                             .then(response => response.json())
@@ -248,13 +254,10 @@ class StreamServer:
                                 `;
                             }});
                     }}
-                    socket.on('emit_status', function(data) {{
-                        updateStatus(data);
-                    }});
 
                     function controlConveyor(state) {{
                         console.log("Control conveyor action:", state);
-                        socket.emit('update_conveyor_stop', {{ state: state }});
+                        socket.emit('control_conveyor', {{ state: state }});
                         // fetch('/api/control', {{
                         //     method: 'POST',
                         //     headers: {{ 'Content-Type': 'application/json' }},
@@ -275,7 +278,8 @@ class StreamServer:
         """Run the Flask server"""
         # Disable debug mode and reduce logging
         logging.getLogger('werkzeug').setLevel(logging.ERROR)
-        self.app.run(host=host, port=port, debug=False, use_reloader=False)
+        # self.app.run(host=host, port=port, debug=False, use_reloader=False)   # <-- This is pure Flask Replace by socketio.run
+        self.socketio.run(self.app, host=host, port=port, debug=False, use_reloader=False)
     
     def run_threaded(self, host='0.0.0.0', port=5000):
         """Run the Flask server with SocketIO in a separate thread"""
@@ -287,3 +291,10 @@ class StreamServer:
         server_thread.daemon = True
         server_thread.start()
         return server_thread
+        # self.socketio.run(
+        #     self.app,
+        #     host=host, 
+        #     port=port, 
+        #     debug=False, 
+        #     use_reloader=False
+        # )
