@@ -28,8 +28,8 @@ class StreamServer:
                 cls._instance = super(StreamServer, cls).__new__(cls)
                 
                 # Set template folder relative to the server.py file
-                template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'templates')
-                static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'static')
+                template_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
+                static_dir = os.path.join(os.path.dirname(os.path.abspath(__file__))', 'static')
                 
                 cls._instance.app = Flask(__name__, 
                                         template_folder=template_dir,
