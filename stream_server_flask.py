@@ -201,7 +201,7 @@ class StreamServer:
         <html>
 
             <head>
-                <script src="/socket.io/socket.io.js"></script>
+                <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
 
                 <style>
                     .status {{ padding: 10px; margin: 10px; border: 1px solid #ccc; }}
