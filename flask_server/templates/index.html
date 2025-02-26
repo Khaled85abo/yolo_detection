@@ -3,7 +3,7 @@
 
 <head>
     <title>Plank Detection System</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.0/socket.io.min.js"></script>
     <style>
         .status {
             padding: 10px;
@@ -59,15 +59,42 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const socket = io();
+            // Initialize Socket.IO with explicit configuration
+            const socket = io({
+                reconnectionAttempts: 5,
+                reconnectionDelay: 1000,
+                timeout: 20000,
+                transports: ['websocket', 'polling']
+            });
+
+            let connectionStatus = 'disconnected';
 
             socket.on('connect', function () {
                 console.log('Connected to server');
+                connectionStatus = 'connected';
+                document.getElementById('connection-status').textContent = 'Connected';
                 updateStatus();
             });
 
-            socket.on('disconnect', function () {
-                console.log('Disconnected from server');
+            socket.on('connect_error', function (error) {
+                console.error('Connection error:', error);
+                document.getElementById('connection-status').textContent = 'Connection Error';
+            });
+
+            socket.on('disconnect', function (reason) {
+                console.log('Disconnected from server:', reason);
+                connectionStatus = 'disconnected';
+                document.getElementById('connection-status').textContent = 'Disconnected';
+
+                // Auto-reconnect if not intentional
+                if (reason !== 'io client disconnect') {
+                    setTimeout(() => {
+                        if (connectionStatus === 'disconnected') {
+                            console.log('Attempting to reconnect...');
+                            socket.connect();
+                        }
+                    }, 2000);
+                }
             });
 
             socket.on('status_update', function (data) {
@@ -77,10 +104,12 @@
 
             function updateStatus(data) {
                 if (!data) {
-                    fetch('/api/status')
-                        .then(response => response.json())
-                        .then(data => updateStatusDisplay(data))
-                        .catch(err => console.error('Error fetching status:', err));
+                    if (connectionStatus === 'connected') {
+                        fetch('/api/status')
+                            .then(response => response.json())
+                            .then(data => updateStatusDisplay(data))
+                            .catch(err => console.error('Error fetching status:', err));
+                    }
                 } else {
                     updateStatusDisplay(data);
                 }
@@ -106,10 +135,15 @@
                 // Add acknowledgment logic here
             };
 
-            // Update status periodically as a fallback
-            setInterval(updateStatus, 5000);
+            // Reduce polling frequency to reduce server load
+            // setInterval(updateStatus, 10000);
         });
     </script>
+
+    <!-- Connection Status Display -->
+    <div style="position: fixed; top: 10px; right: 10px; background-color: #eee; padding: 5px; border-radius: 5px;">
+        WebSocket: <span id="connection-status">Initializing...</span>
+    </div>
 </body>
 
 </html>

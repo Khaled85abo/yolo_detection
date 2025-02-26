@@ -459,7 +459,8 @@ def main():
     picam2.start()
 
     try:
-        from stream_server_flask import StreamServer
+        # from stream_server_flask import StreamServer
+        from flask_server.server import StreamServer
         print("Starting stream server...")
         server = StreamServer()
         server.add_camera('camera1', frame_size=(roi_width, target_height))
