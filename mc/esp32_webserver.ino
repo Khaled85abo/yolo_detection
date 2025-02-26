@@ -232,8 +232,21 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length)
         {
             handleStatusUpdate(doc[1]);
         }
+        else if (strcmp(event, "update_conveyor_stop") == 0)
+        {
+            handleConveyorStopUpdate(doc[1]);
+        }
         break;
     }
+}
+
+void handleConveyorStopUpdate(const JsonDocument &doc)
+{
+    conveyorStopLedActive = doc["state"];
+    Serial.println("Conveyor stop updated to: " + String(conveyorStopLedActive));
+    // Emit an event to update the conveyor stop status in the Flask server
+    String payload = "{\"state\": " + String(conveyorStopLedActive) + "}";
+    socketIO.send(sIOtype_EVENT, "update_conveyor_stop", payload.c_str());
 }
 
 void handleStatusUpdate(const JsonDocument &doc)
