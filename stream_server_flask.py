@@ -98,33 +98,45 @@ class StreamServer:
     def on_disconnect(self):
         print("Client disconnected")
 
-    def on_control_conveyor(self):
+    def on_control_conveyor(self, data):
         """Send conveyor status to ESP32"""
-        state = request.json.get('state')
-        self.socketio.emit('update_conveyor_stop', state)
+        print("on_control_conveyor received:", data)
+        if isinstance(data, dict) and 'state' in data:
+            state = data['state']
+            self.plank_status.conveyor_stop = state
+            self.socketio.emit('update_conveyor_stop', {'state': state})
+            # Also emit updated status to all clients
+            self.emit_status()
 
     def emit_status(self):
         """Emit status to all connected clients"""
         try:
-            status = self.get_status()
-            self.socketio.emit('status_update', status.json)  # Use .json to get the JSON data from jsonify response
+            # Create data directly instead of using jsonify response
+            status_data = {
+                'overlap': False if len(self.plank_status.overlap) == 0 else True,
+                'stop': False if len(self.plank_status.stop) == 0 else True,
+                'incorrect': False if len(self.plank_status.incorrect) == 0 else True,
+                'conveyor_stop': self.plank_status.conveyor_stop
+            }
+            print(f"Emitting status update: {status_data}")
+            self.socketio.emit('status_update', status_data)
         except Exception as e:
             print(f"Error emitting status: {e}")
 
-    def update_conveyor_stop(self):
+    def update_conveyor_stop(self, data):
         """Update conveyor status from ESP32"""
         try:
-            data = request.get_json()  # Get the raw JSON data
-            print("Control update received:", data)
+            print("Conveyor update received:", data)
             if isinstance(data, dict) and 'state' in data:
-                self.plank_status.conveyor_stop = data['state']  # Use 'action' directly from the JSON
+                self.plank_status.conveyor_stop = data['state']
                 self.emit_status()  # Emit the updated status to all clients
-                return jsonify({'status': 'success', 'conveyor_stop': self.plank_status.conveyor_stop})
+                return True
             else:
-                return jsonify({'status': 'error', 'message': 'Invalid data format'})
+                print("Invalid data format for update_conveyor_stop")
+                return False
         except Exception as e:
             print(f"Error in update_conveyor_stop: {e}")
-            return jsonify({'status': 'error', 'message': str(e)})
+            return False
 
     def add_camera(self, camera_id, frame_size=(640, 480)):
         """Add a new camera feed"""
