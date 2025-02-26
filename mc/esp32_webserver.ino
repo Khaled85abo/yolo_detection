@@ -120,8 +120,8 @@ const char index_html[] PROGMEM = R"rawliteral(
         }
         function updateConveyorStop(conveyor_stop) {
             const element = document.querySelector('.conveyor-status > h3');
-            element.className = 'conveyor-status ' + (conveyor_stop ? 'inactive' : 'active');
-            element.innerHTML = 'Conveyor Status: ' + (conveyor_stop ? 'Running' : 'Stopped');
+            element.className = 'conveyor-status ' + (conveyor_stop ? 'active' : 'inactive');
+            element.innerHTML = 'Conveyor Status: ' + (conveyor_stop ? 'Stopped' : 'Running');
         }
 
 
@@ -245,8 +245,8 @@ void handleConveyorStopUpdate(const JsonDocument &doc)
     conveyorStopLedActive = doc["state"];
     Serial.println("Conveyor stop updated to: " + String(conveyorStopLedActive));
     // Emit an event to update the conveyor stop status in the Flask server
-    String payload = "{\"state\": " + String(conveyorStopLedActive) + "}";
-    socketIO.send(sIOtype_EVENT, "update_conveyor_stop", payload.c_str());
+    String payload = "[\"update_conveyor_stop\", {\"state\": " + String(conveyorStopLedActive) + "}]";
+    socketIO.sendEVENT(payload);
 }
 
 void handleStatusUpdate(const JsonDocument &doc)
