@@ -473,7 +473,7 @@ def main():
     global output_path
 
     try:
-        from output_video import OutputVideo
+        from video_output import OutputVideo
         out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, target_width=roi_width, target_height=target_height)
         out_cls.create_writer(name='camera1', subfolder='pi')
 
