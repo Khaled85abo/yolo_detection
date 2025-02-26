@@ -5,7 +5,6 @@
 #include <SocketIOclient.h>
 #include <ArduinoJson.h>
 
-// esp32 ip address: http://192.168.1.202/
 // Flask server IP address
 const char *flask_server_ip = "http://192.168.1.249:5000/api/status";
 
@@ -14,15 +13,11 @@ const char *ssid = "TN-JE3155";
 const char *password = "";
 
 // LED pins
-const int PLANK_STOP_LED = 19;     // stop
-const int PLANK_OVERLAP_LED = 4;   // overlap
-const int PLANK_INCORRECT_LED = 5; // incorrect
-const int CONVEYOR_STOP_LED = 22;  // conveyor_status
-// Global variables to store LED states
-bool plankStopLedActive = true;      // stop
-bool plankOverlapLedActive = true;   // overlap
-bool plankIncorrectLedActive = true; // incorrect
-bool conveyorStopLedActive = true;   // conveyor_status
+const int RED_LED = 19;
+const int YELLOW_LED = 4;
+const int GREEN_LED = 5;
+const int CONVEYOR_STOP_PIN = 22;
+
 WebServer server(80);
 
 // Replace WebSocketsClient with SocketIOclient
@@ -34,9 +29,15 @@ const int ws_port = 5000;                  // Flask's port
 const char *ws_path = "/socket.io/?EIO=4"; // Socket.IO path with Engine.IO v4 protocol
 unsigned long lastStatusCheck = 0;
 unsigned long lastBlinkTime = 0;
-// const unsigned long STATUS_CHECK_INTERVAL = 1000; // Check every 1 second
-const unsigned long BLINK_INTERVAL = 250; // Blink
+const unsigned long STATUS_CHECK_INTERVAL = 1000; // Check every 1 second
+const unsigned long BLINK_INTERVAL = 250;         // Blink every 250ms
 bool ledState = false;
+
+// Global variables to store LED states
+bool redLedActive = false;
+bool yellowLedActive = false;
+bool greenLedActive = false;
+bool conveyorStopActive = false;
 
 // HTML content as a string constant
 const char index_html[] PROGMEM = R"rawliteral(
@@ -132,10 +133,10 @@ void setup()
     socketIO.onEvent(socketIOEvent);
 
     // Set LED pins as outputs
-    pinMode(PLANK_STOP_LED, OUTPUT);
-    pinMode(PLANK_OVERLAP_LED, OUTPUT);
-    pinMode(PLANK_INCORRECT_LED, OUTPUT);
-    pinMode(CONVEYOR_STOP_LED, OUTPUT);
+    pinMode(RED_LED, OUTPUT);
+    pinMode(YELLOW_LED, OUTPUT);
+    pinMode(GREEN_LED, OUTPUT);
+    pinMode(CONVEYOR_STOP_PIN, OUTPUT);
 
     // Route for root / web page
     server.on("/", HTTP_GET, []()
@@ -149,25 +150,26 @@ void setup()
 
 void loop()
 {
-    socketIO.loop(); // This handles incoming Socket.IO events
+    socketIO.loop();
     server.handleClient();
+    // Check status periodically
+    unsigned long currentMillis = millis();
 
     // Handle LED blinking
-    unsigned long currentMillis = millis();
     if (currentMillis - lastBlinkTime >= BLINK_INTERVAL)
     {
         lastBlinkTime = currentMillis;
         ledState = !ledState;
 
         // Update LEDs based on their active state
-        if (plankStopLedActive)
-            digitalWrite(PLANK_STOP_LED, ledState ? HIGH : LOW);
-        if (plankOverlapLedActive)
-            digitalWrite(PLANK_OVERLAP_LED, ledState ? HIGH : LOW);
-        if (plankIncorrectLedActive)
-            digitalWrite(PLANK_INCORRECT_LED, ledState ? HIGH : LOW);
-        if (conveyorStopLedActive)
-            digitalWrite(CONVEYOR_STOP_LED, ledState ? HIGH : LOW);
+        if (redLedActive)
+            digitalWrite(RED_LED, ledState ? HIGH : LOW);
+        if (yellowLedActive)
+            digitalWrite(YELLOW_LED, ledState ? HIGH : LOW);
+        if (greenLedActive)
+            digitalWrite(GREEN_LED, ledState ? HIGH : LOW);
+        if (conveyorStopActive)
+            digitalWrite(CONVEYOR_STOP_PIN, ledState ? HIGH : LOW);
     }
 }
 
@@ -185,13 +187,41 @@ String fetchStatusFromServer()
     }
     return payload;
 }
-
-// Keep the API endpoint handler separate
 void getStatus()
 {
-    // return the current status of the LEDs
-    String payload = "{\"stop\": " + String(plankStopLedActive) + ", \"overlap\": " + String(plankOverlapLedActive) + ", \"incorrect\": " + String(plankIncorrectLedActive) + "}";
+    String payload = fetchStatusFromServer();
+
+    // Create a JSON document
+    StaticJsonDocument<200> doc;
+    DeserializationError error = deserializeJson(doc, payload);
+
+    if (error)
+    {
+        Serial.print("JSON parsing failed: ");
+        Serial.println(error.c_str());
+        return;
+    }
+    handleStatusUpdate(doc);
     server.send(200, "application/json", payload);
+}
+
+void handleStatusUpdate(const JsonDocument &doc)
+{
+    // Update LED active states instead of directly controlling pins
+    redLedActive = doc["stop"];
+    yellowLedActive = doc["overlap"];
+    greenLedActive = doc["incorrect"];
+    conveyorStopActive = doc["conveyor_status"] == "stop";
+
+    // If not active, ensure LEDs are off
+    if (!redLedActive)
+        digitalWrite(RED_LED, LOW);
+    if (!yellowLedActive)
+        digitalWrite(YELLOW_LED, LOW);
+    if (!greenLedActive)
+        digitalWrite(GREEN_LED, LOW);
+    if (!conveyorStopActive)
+        digitalWrite(CONVEYOR_STOP_PIN, LOW);
 }
 
 // Update WebSocket event handler to handle Socket.IO events
@@ -227,23 +257,4 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length)
         }
         break;
     }
-}
-
-void handleStatusUpdate(const JsonDocument &doc)
-{
-    // Update LED active states instead of directly controlling pins
-    plankStopLedActive = doc["stop"];
-    plankOverlapLedActive = doc["overlap"];
-    plankIncorrectLedActive = doc["incorrect"];
-    conveyorStopLedActive = doc["conveyor_status"] == "stop";
-
-    // If not active, ensure LEDs are off
-    if (!plankStopLedActive)
-        digitalWrite(PLANK_STOP_LED, LOW);
-    if (!plankOverlapLedActive)
-        digitalWrite(PLANK_OVERLAP_LED, LOW);
-    if (!plankIncorrectLedActive)
-        digitalWrite(PLANK_INCORRECT_LED, LOW);
-    if (!conveyorStopLedActive)
-        digitalWrite(CONVEYOR_STOP_LED, LOW);
 }
