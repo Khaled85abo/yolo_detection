@@ -62,7 +62,7 @@ class StreamServer:
                     async_mode='eventlet',
                     ping_timeout=20,
                     ping_interval=10,
-                    path='/ws'  # Add this to match ESP32's WebSocket path
+                    # Remove the path parameter or set it to default
                 )
                 cls._instance.cameras = {}
                 cls._instance.frame_locks = {}

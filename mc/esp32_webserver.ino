@@ -25,7 +25,8 @@ SocketIOclient socketIO;
 
 // Update Flask server details
 const char *ws_server = "192.168.1.249";
-const int ws_port = 5000; // Change to Flask's port (5000)
+const int ws_port = 5000;                  // Flask's port
+const char *ws_path = "/socket.io/?EIO=4"; // Socket.IO path with Engine.IO v4 protocol
 unsigned long lastStatusCheck = 0;
 unsigned long lastBlinkTime = 0;
 const unsigned long STATUS_CHECK_INTERVAL = 1000; // Check every 1 second
@@ -75,11 +76,21 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length)
 
 void handleStatusUpdate(const JsonDocument &doc)
 {
-    // Update LED states based on JSON values
-    digitalWrite(RED_LED, doc["stop"] ? HIGH : LOW);
-    digitalWrite(YELLOW_LED, doc["overlap"] ? HIGH : LOW);
-    digitalWrite(GREEN_LED, doc["incorrect"] ? HIGH : LOW);
-    digitalWrite(CONVEYOR_STOP_PIN, doc["conveyor_status"] == "stop" ? HIGH : LOW);
+    // Update LED active states instead of directly controlling pins
+    redLedActive = doc["stop"];
+    yellowLedActive = doc["overlap"];
+    greenLedActive = doc["incorrect"];
+    conveyorStopActive = doc["conveyor_status"] == "stop";
+
+    // If not active, ensure LEDs are off
+    if (!redLedActive)
+        digitalWrite(RED_LED, LOW);
+    if (!yellowLedActive)
+        digitalWrite(YELLOW_LED, LOW);
+    if (!greenLedActive)
+        digitalWrite(GREEN_LED, LOW);
+    if (!conveyorStopActive)
+        digitalWrite(CONVEYOR_STOP_PIN, LOW);
 }
 
 // HTML content as a string constant
@@ -171,8 +182,8 @@ void setup()
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
 
-    // Initialize Socket.IO connection
-    socketIO.begin(ws_server, ws_port);
+    // Initialize Socket.IO connection with correct path
+    socketIO.begin(ws_server, ws_port, ws_path);
     socketIO.onEvent(socketIOEvent);
 
     // Set LED pins as outputs
@@ -193,17 +204,11 @@ void setup()
 
 void loop()
 {
-    socketIO.loop();
+    socketIO.loop(); // This handles incoming Socket.IO events
     server.handleClient();
-    // Check status periodically
-    unsigned long currentMillis = millis();
-    if (currentMillis - lastStatusCheck >= STATUS_CHECK_INTERVAL)
-    {
-        lastStatusCheck = currentMillis;
-        getStatus();
-    }
 
     // Handle LED blinking
+    unsigned long currentMillis = millis();
     if (currentMillis - lastBlinkTime >= BLINK_INTERVAL)
     {
         lastBlinkTime = currentMillis;
@@ -211,13 +216,13 @@ void loop()
 
         // Update LEDs based on their active state
         if (redLedActive)
-            digitalWrite(RED_LED, ledState);
+            digitalWrite(RED_LED, ledState ? HIGH : LOW);
         if (yellowLedActive)
-            digitalWrite(YELLOW_LED, ledState);
+            digitalWrite(YELLOW_LED, ledState ? HIGH : LOW);
         if (greenLedActive)
-            digitalWrite(GREEN_LED, ledState);
+            digitalWrite(GREEN_LED, ledState ? HIGH : LOW);
         if (conveyorStopActive)
-            digitalWrite(CONVEYOR_STOP_PIN, ledState);
+            digitalWrite(CONVEYOR_STOP_PIN, ledState ? HIGH : LOW);
     }
 }
 
@@ -235,7 +240,9 @@ String fetchStatusFromServer()
     }
     return payload;
 }
-void getStatus()
+
+// Rename this function to avoid confusion with the API endpoint handler
+void checkStatus()
 {
     String payload = fetchStatusFromServer();
 
@@ -250,4 +257,11 @@ void getStatus()
         return;
     }
     handleStatusUpdate(doc);
+}
+
+// Keep the API endpoint handler separate
+void getStatus()
+{
+    String payload = fetchStatusFromServer();
+    server.send(200, "application/json", payload);
 }
