@@ -17,12 +17,12 @@ const char *password = "";
 const int PLANK_STOP_LED = 19;     // stop
 const int PLANK_OVERLAP_LED = 4;   // overlap
 const int PLANK_INCORRECT_LED = 5; // incorrect
-const int CONVEYOR_STOP_LED = 22;  // conveyor_status
+const int CONVEYOR_STOP_LED = 22;  // conveyor_stop
 // Global variables to store LED states
 bool plankStopLedActive = true;      // stop
 bool plankOverlapLedActive = true;   // overlap
 bool plankIncorrectLedActive = true; // incorrect
-bool conveyorStopLedActive = true;   // conveyor_status
+bool conveyorStopLedActive = true;   // conveyor_stop
 WebServer server(80);
 
 // Replace WebSocketsClient with SocketIOclient
@@ -30,6 +30,7 @@ SocketIOclient socketIO;
 
 // Update Flask server details
 const char *ws_server = "192.168.1.249";
+bool connected = false;
 const int ws_port = 5000;                  // Flask's port
 const char *ws_path = "/socket.io/?EIO=4"; // Socket.IO path with Engine.IO v4 protocol
 unsigned long lastStatusCheck = 0;
@@ -60,6 +61,12 @@ const char index_html[] PROGMEM = R"rawliteral(
 </head>
 <body>
     <h1>Plank Monitor</h1>
+    <div class="connection-status">
+        <h3>Connection Status!!</h3>
+    </div>
+    <div class="conveyor-status">
+        <h3>Conveyor Status!!</h3>
+    </div>
     <div id="warnings">
         <div id="stopped" class="warning inactive">
             <h3>Stopped Plank</h3>
@@ -97,6 +104,8 @@ const char index_html[] PROGMEM = R"rawliteral(
                     updateWarning('stopped', data.stop);
                     updateWarning('overlap', data.overlap);
                     updateWarning('incorrect', data.incorrect);
+                    updateConnectionStatus(data.connected);
+                    updateConveyorStop(data.conveyor_stop);
                 });
         }
 
@@ -104,6 +113,17 @@ const char index_html[] PROGMEM = R"rawliteral(
             const element = document.getElementById(type);
             element.className = 'warning ' + (active ? 'active' : 'inactive');
         }
+        function updateConnectionStatus(connected) {
+            const element = document.querySelector('.connection-status > h3');
+            element.className = 'connection-status ' + (connected ? 'inactive' : 'active');
+            element.innerHTML = 'Connected to Flask server: ' + (connected ? 'Yes' : 'No');
+        }
+        function updateConveyorStop(conveyor_stop) {
+            const element = document.querySelector('.conveyor-status > h3');
+            element.className = 'conveyor-status ' + (conveyor_stop ? 'inactive' : 'active');
+            element.innerHTML = 'Conveyor Status: ' + (conveyor_stop ? 'Running' : 'Stopped');
+        }
+
 
         setInterval(updateStatus, 1000);
 
@@ -171,26 +191,11 @@ void loop()
     }
 }
 
-String fetchStatusFromServer()
-{
-    HTTPClient http;
-    http.begin(flask_server_ip);
-    int httpCode = http.GET();
-    String payload = http.getString();
-    http.end();
-
-    if (httpCode != 200)
-    {
-        payload = "{\"stop\": true, \"overlap\": true, \"incorrect\": true}";
-    }
-    return payload;
-}
-
 // Keep the API endpoint handler separate
 void getStatus()
 {
     // return the current status of the LEDs
-    String payload = "{\"stop\": " + String(plankStopLedActive) + ", \"overlap\": " + String(plankOverlapLedActive) + ", \"incorrect\": " + String(plankIncorrectLedActive) + "}";
+    String payload = "{\"stop\": " + String(plankStopLedActive) + ", \"overlap\": " + String(plankOverlapLedActive) + ", \"incorrect\": " + String(plankIncorrectLedActive) + ", \"connected\": " + String(connected) + ", \"conveyor_stop\": " + String(conveyorStopLedActive) + "}";
     server.send(200, "application/json", payload);
 }
 
@@ -201,11 +206,13 @@ void socketIOEvent(socketIOmessageType_t type, uint8_t *payload, size_t length)
     {
     case sIOtype_DISCONNECT:
         Serial.println("Socket.IO Disconnected!");
+        connected = false;
         break;
     case sIOtype_CONNECT:
         Serial.println("Socket.IO Connected!");
         // Join default namespace
         socketIO.send(sIOtype_CONNECT, "/");
+        connected = true;
         break;
     case sIOtype_EVENT:
         Serial.printf("[IOc] Event: %s\n", payload);
@@ -235,7 +242,7 @@ void handleStatusUpdate(const JsonDocument &doc)
     plankStopLedActive = doc["stop"];
     plankOverlapLedActive = doc["overlap"];
     plankIncorrectLedActive = doc["incorrect"];
-    conveyorStopLedActive = doc["conveyor_status"] == "stop";
+    conveyorStopLedActive = doc["conveyor_stop"];
 
     // If not active, ensure LEDs are off
     if (!plankStopLedActive)

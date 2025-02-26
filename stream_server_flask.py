@@ -45,7 +45,7 @@ class PlankStatus:
         self.overlap: List[tuple] = []
         self.stop: List[int] = []
         self.incorrect: List[int] = []
-        self.conveyor_status: str = "start"
+        self.conveyor_stop: bool = False
 
 class StreamServer:
     _instance = None
@@ -78,7 +78,7 @@ class StreamServer:
                 cls._instance.socketio.on_event('connect', cls._instance.on_connect)
                 cls._instance.socketio.on_event('disconnect', cls._instance.on_disconnect)
                 cls._instance.socketio.on_event('control_conveyor', cls._instance.on_control_conveyor) #send conveyor action to esp32
-                cls._instance.socketio.on_event('update_conveyor_status',cls._instance.update_conveyor_status) #get conveyor status from esp32
+                cls._instance.socketio.on_event('update_conveyor_stop',cls._instance.update_conveyor_stop) #get conveyor status from esp32
                 cls._instance.socketio.on_event('status_update', cls._instance.emit_status) #emit status to esp32
 
                 
@@ -100,8 +100,8 @@ class StreamServer:
 
     def on_control_conveyor(self):
         """Send conveyor status to ESP32"""
-        action = request.json.get('action')
-        self.socketio.emit('update_conveyor_status', action)
+        state = request.json.get('state')
+        self.socketio.emit('update_conveyor_stop', state)
 
     def emit_status(self):
         """Emit status to all connected clients"""
@@ -111,19 +111,19 @@ class StreamServer:
         except Exception as e:
             print(f"Error emitting status: {e}")
 
-    def update_conveyor_status(self):
+    def update_conveyor_stop(self):
         """Update conveyor status from ESP32"""
         try:
             data = request.get_json()  # Get the raw JSON data
             print("Control update received:", data)
-            if isinstance(data, dict) and 'action' in data:
-                self.plank_status.conveyor_status = data['action']  # Use 'action' directly from the JSON
+            if isinstance(data, dict) and 'state' in data:
+                self.plank_status.conveyor_stop = data['state']  # Use 'action' directly from the JSON
                 self.emit_status()  # Emit the updated status to all clients
-                return jsonify({'status': 'success', 'conveyor_status': self.plank_status.conveyor_status})
+                return jsonify({'status': 'success', 'conveyor_stop': self.plank_status.conveyor_stop})
             else:
                 return jsonify({'status': 'error', 'message': 'Invalid data format'})
         except Exception as e:
-            print(f"Error in update_conveyor_status: {e}")
+            print(f"Error in update_conveyor_stop: {e}")
             return jsonify({'status': 'error', 'message': str(e)})
 
     def add_camera(self, camera_id, frame_size=(640, 480)):
@@ -180,17 +180,15 @@ class StreamServer:
             'overlap': False if len(self.plank_status.overlap) == 0 else True,
             'stop': False if len(self.plank_status.stop) == 0 else True,
             'incorrect': False if len(self.plank_status.incorrect) == 0 else True,
-            'conveyor_status': self.plank_status.conveyor_status
+            'conveyor_stop': self.plank_status.conveyor_stop
         })
 
     def control_conveyor(self):
         """API endpoint to control conveyor"""
-        action = request.json.get('action')
-        if action in ['stop', 'start']:
-            self.plank_status.conveyor_status = 'stop' if action == 'stop' else 'start'
-            # Here you would add actual conveyor control logic
-            return jsonify({'status': 'success', 'conveyor_status': self.plank_status.conveyor_status})
-        return jsonify({'status': 'error', 'message': 'Invalid action'})
+        state = request.json.get('state')
+        self.plank_status.conveyor_stop = state
+        # Here you would add actual conveyor control logic
+        return jsonify({'status': 'success', 'conveyor_stop': self.plank_status.conveyor_stop})
 
     def index(self):
         """Enhanced main page with status and controls"""
@@ -216,8 +214,8 @@ class StreamServer:
                     Loading status...
                 </div>
                 <div class="controls">
-                    <button onclick="controlConveyor('stop')" style="background-color: #ff4444;">Stop Conveyor</button>
-                    <button onclick="controlConveyor('start')" style="background-color: #44ff44;">Start Conveyor</button>
+                    <button onclick="controlConveyor(true)" style="background-color: #ff4444;">Stop Conveyor</button>
+                    <button onclick="controlConveyor(false)" style="background-color: #44ff44;">Start Conveyor</button>
                 </div>
                 <div id="warnings">
                     <div id="stopped" class="warning inactive">
@@ -239,7 +237,7 @@ class StreamServer:
                             .then(data => {{
                                 console.log(data);
                                 document.getElementById('status').innerHTML = `
-                                    <p>Conveyor Status: <strong>${{data.conveyor_status}}</strong></p>
+                                    <p>Conveyor Status: <strong>${{data.conveyor_stop}}</strong></p>
                                     <p>Overlapped Planks: <strong>${{data.overlap ? 'Yes' : 'No'}}</strong></p>
                                     <p>Stopped Planks: <strong>${{data.stop ? 'Yes' : 'No'}}</strong></p>
                                     <p>Incorrect Planks: <strong>${{data.incorrect ? 'Yes' : 'No'}}</strong></p>
@@ -250,13 +248,13 @@ class StreamServer:
                         updateStatus(data);
                     }});
 
-                    function controlConveyor(action) {{
-                        console.log("Control conveyor action:", action);
-                        socket.emit('update_conveyor_status', {{ action: action }});
+                    function controlConveyor(state) {{
+                        console.log("Control conveyor action:", state);
+                        socket.emit('update_conveyor_stop', {{ state: state }});
                         // fetch('/api/control', {{
                         //     method: 'POST',
                         //     headers: {{ 'Content-Type': 'application/json' }},
-                        //     body: JSON.stringify({{ action: action }})
+                        //     body: JSON.stringify({{ state: state }})
                         // }})
                         // .then(response => response.json())
                         // .then(data => updateStatus());
