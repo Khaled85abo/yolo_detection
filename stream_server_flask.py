@@ -165,41 +165,41 @@ class StreamServer:
 
 
         
-    def update_status(self, overlapped=None, stopped=None, incorrect=None):
-        """Update the status of planks"""
-        print("Updating status:", overlapped, stopped, incorrect)
-        if overlapped is not None:
-            self.plank_status.overlap = overlapped
-        if stopped is not None:
-            self.plank_status.stop = stopped
-        if incorrect is not None:
-            self.plank_status.incorrect = incorrect
-        self.emit_status()
-
-
     # def update_status(self, overlapped=None, stopped=None, incorrect=None):
     #     """Update the status of planks"""
     #     print("Updating status:", overlapped, stopped, incorrect)
-        
-    #     # Store previous state to check for changes
-    #     prev_overlap = self.plank_status.overlap.copy()
-    #     prev_stop = self.plank_status.stop.copy()
-    #     prev_incorrect = self.plank_status.incorrect.copy()
-        
-    #     # Update the state
     #     if overlapped is not None:
     #         self.plank_status.overlap = overlapped
     #     if stopped is not None:
     #         self.plank_status.stop = stopped
     #     if incorrect is not None:
     #         self.plank_status.incorrect = incorrect
+    #     self.emit_status()
+
+
+    def update_status(self, overlapped=None, stopped=None, incorrect=None):
+        """Update the status of planks"""
+        print("Updating status:", overlapped, stopped, incorrect)
         
-    #     # Only emit if state has changed
-    #     if (prev_overlap != self.plank_status.overlap or 
-    #         prev_stop != self.plank_status.stop or 
-    #         prev_incorrect != self.plank_status.incorrect):
-    #         print("State changed, emitting status update")
-    #         self.emit_status()
+        # Store previous state to check for changes
+        prev_overlap = self.plank_status.overlap.copy()
+        prev_stop = self.plank_status.stop.copy()
+        prev_incorrect = self.plank_status.incorrect.copy()
+        
+        # Update the state
+        if overlapped is not None:
+            self.plank_status.overlap = overlapped
+        if stopped is not None:
+            self.plank_status.stop = stopped
+        if incorrect is not None:
+            self.plank_status.incorrect = incorrect
+        
+        # Only emit if state has changed
+        if (prev_overlap != self.plank_status.overlap or 
+            prev_stop != self.plank_status.stop or 
+            prev_incorrect != self.plank_status.incorrect):
+            print("State changed, emitting status update")
+            self.emit_status()
 
     def get_status(self):
         """API endpoint to get current status"""
