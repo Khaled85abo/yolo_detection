@@ -199,7 +199,10 @@ class StreamServer:
         
         return f"""
         <html>
+
             <head>
+                <script src="/socket.io/socket.io.js"></script>
+
                 <style>
                     .status {{ padding: 10px; margin: 10px; border: 1px solid #ccc; }}
                     .warning {{ color: red; }}
@@ -227,6 +230,7 @@ class StreamServer:
                     const socket = io();
                     socket.on('connect', function() {{
                         console.log('Connected to server');
+                        updateStatus();
                     }});
                     socket.on('disconnect', function() {{
                         console.log('Disconnected from server');

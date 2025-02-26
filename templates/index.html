@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Plank Detection System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        .status {
+            padding: 10px;
+            margin: 10px;
+            border: 1px solid #ccc;
+        }
+
+        .warning {
+            color: red;
+        }
+
+        .controls {
+            margin: 20px;
+        }
+
+        button {
+            padding: 10px;
+            margin: 5px;
+        }
+
+        .camera-feed {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Plank Detection System</h1>
+
+    <!-- Camera Feeds -->
+    {% for camera_id in camera_ids %}
+    <div class="camera-feed">
+        <h2>Camera {{ camera_id }}</h2>
+        <img src="/video_feed/{{ camera_id }}" width="{{ frame_size[0] }}" height="{{ frame_size[1] }}" />
+    </div>
+    {% endfor %}
+
+    <div class="status" id="status">
+        Loading status...
+    </div>
+
+    <div class="controls">
+        <button onclick="controlConveyor(true)" style="background-color: #ff4444;">Stop Conveyor</button>
+        <button onclick="controlConveyor(false)" style="background-color: #44ff44;">Start Conveyor</button>
+    </div>
+
+    <div id="warnings">
+        <div id="stopped" class="warning inactive">
+            <h3>Stopped Plank</h3>
+            <button onclick="acknowledge('stopped')">Acknowledge</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const socket = io();
+
+            socket.on('connect', function () {
+                console.log('Connected to server');
+                updateStatus();
+            });
+
+            socket.on('disconnect', function () {
+                console.log('Disconnected from server');
+            });
+
+            socket.on('status_update', function (data) {
+                console.log('Status update received:', data);
+                updateStatus(data);
+            });
+
+            function updateStatus(data) {
+                if (!data) {
+                    fetch('/api/status')
+                        .then(response => response.json())
+                        .then(data => updateStatusDisplay(data))
+                        .catch(err => console.error('Error fetching status:', err));
+                } else {
+                    updateStatusDisplay(data);
+                }
+            }
+
+            function updateStatusDisplay(data) {
+                console.log('Updating status display:', data);
+                document.getElementById('status').innerHTML = `
+                    <p>Conveyor Status: <strong>${data.conveyor_stop ? 'Stopped' : 'Running'}</strong></p>
+                    <p>Overlapped Planks: <strong>${data.overlap ? 'Yes' : 'No'}</strong></p>
+                    <p>Stopped Planks: <strong>${data.stop ? 'Yes' : 'No'}</strong></p>
+                    <p>Incorrect Planks: <strong>${data.incorrect ? 'Yes' : 'No'}</strong></p>
+                `;
+            }
+
+            window.controlConveyor = function (state) {
+                console.log("Control conveyor action:", state);
+                socket.emit('control_conveyor', { state: state });
+            };
+
+            window.acknowledge = function (type) {
+                console.log("Acknowledging:", type);
+                // Add acknowledgment logic here
+            };
+
+            // Update status periodically as a fallback
+            setInterval(updateStatus, 5000);
+        });
+    </script>
+</body>
+
+</html>
