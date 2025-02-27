@@ -30,3 +30,6 @@ def get_plank_orientation(points, width, height):
         print("Orientation: incorrect")
         orientation = "incorrect" 
 
+    return orientation, angle, aspect_ratio
+
+
