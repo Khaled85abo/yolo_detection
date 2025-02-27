@@ -2,9 +2,12 @@ import cv2
 import os
 from datetime import datetime
 import threading
+
+
 class OutputVideo:
     _instance = None
     _lock = threading.Lock()
+    base_directory = 'videos_output'
     
     def __new__(cls, *args, **kwargs):
         with cls._lock:
@@ -13,20 +16,19 @@ class OutputVideo:
                 cls._instance._initialized = False
             return cls._instance
     
-    def __init__(self, base_directory='videos_output', fps=10, target_width=640, target_height=480):
+    def __init__(self,  fps=10, target_width=640, target_height=480):
         with self._lock:
             # Skip initialization if already done
             if not self._initialized:
-                self.base_directory = base_directory
                 self.fps = fps
                 self.target_width = target_width
                 self.target_height = target_height
                 self.video_writers = {}
                 
                 # Create base directory if it doesn't exist
-                if not os.path.exists(base_directory):
-                    os.makedirs(base_directory)
-                    print(f"Created base directory: {base_directory}")
+                if not os.path.exists(self.base_directory):
+                    os.makedirs(self.base_directory)
+                    print(f"Created base directory: {self.base_directory}")
                     
                 self._initialized = True
 
