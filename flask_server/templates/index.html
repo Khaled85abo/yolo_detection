@@ -62,20 +62,20 @@
         const socket = io({
             reconnectionAttempts: 5,
             reconnectionDelay: 1000,
-            timeout: 20000,
+            timeout: 5000,
             transports: ['websocket', 'polling']
         });
 
         let connectionStatus = 'disconnected';
 
         socket.on('connect', function () {
-            console.log('Connected to server');
+            console.log('Connected to server websocket');
             connectionStatus = 'connected';
             document.getElementById('connection-status').textContent = 'Connected';
         });
 
         socket.on('connect_error', function (error) {
-            console.error('Connection error:', error);
+            console.error('Connection error websocket:', error);
             document.getElementById('connection-status').textContent = 'Connection Error';
         });
 
@@ -85,7 +85,7 @@
         });
 
         socket.on('disconnect', function (reason) {
-            console.log('Disconnected from server:', reason);
+            console.log('Disconnected from server websocket:', reason);
             connectionStatus = 'disconnected';
             document.getElementById('connection-status').textContent = 'Disconnected';
 
@@ -100,10 +100,6 @@
             }
         });
 
-        socket.on('status_update', function (data) {
-            console.log('Status update received:', data);
-            // updateStatusDisplay(data);
-        });
 
         function updateStatus(data) {
             fetch('/api/status')
@@ -144,8 +140,8 @@
         };
 
         // Reduce polling frequency to reduce server load
-        updateStatus();
-        setInterval(updateStatus, 2000);
+        // updateStatus();
+        // setInterval(updateStatus, 2000);
     </script>
 
     <!-- Connection Status Display -->
