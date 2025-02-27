@@ -1,5 +1,5 @@
 import cv2
-
+from collections import defaultdict
 # aspect ratio
 aspect_ratio_threshold = 0.60
 

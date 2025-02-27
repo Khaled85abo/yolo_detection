@@ -1,14 +1,17 @@
 import time
 import numpy as np
-
+from collections import defaultdict
 from utilities.detect_stop import stop_detection_memory, STOP_THRESHOLD_FRAMES, MOVEMENT_THRESHOLD
 from utilities.detect_overlap import _check_overlap_from_boxes
-from utilities.get_orientation import get_plank_orientation, orientation_memory
+from utilities.get_orientation import get_plank_orientation
 
 
 CONFIDENCE_THRESHOLD = 0.3
 MINIMUM_W_THRESHOLD = 20 # in pixels
 MINIMUM_H_THRESHOLD = 20 # in pixels
+
+orientation_memory = defaultdict(lambda: {"orientation": "unknown", "angle": 0, "aspect_ratio": 0})
+
 
 def process_frame(frame, model, tracker, server):
     """
