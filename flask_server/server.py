@@ -38,7 +38,8 @@ class StreamServer:
                 cls._instance.socketio = SocketIO(
                     cls._instance.app, 
                     cors_allowed_origins="*", 
-                    async_mode='eventlet',
+                    # async_mode='eventlet',
+                    async_mode='threading',  # Changed from 'eventlet' to 'threading'
                     ping_timeout=30,  # Increased timeout
                     ping_interval=15,
                     logger=True,      # Enable logging for debugging
@@ -54,13 +55,13 @@ class StreamServer:
                 cls._instance.app.route('/')(cls._instance.index)
                 cls._instance.app.route('/video_feed/<camera_id>')(cls._instance.video_feed)
                 cls._instance.app.route('/api/status', methods=['GET'])(cls._instance.get_status)
-                cls._instance.app.route('/api/control', methods=['POST'])(cls._instance.control_conveyor)
+                cls._instance.app.route('/api/control_conveyor', methods=['POST'])(cls._instance.control_conveyor)
                 
                 # Add socketio routes
                 cls._instance.socketio.on_event('connect', cls._instance.on_connect)
                 cls._instance.socketio.on_event('disconnect', cls._instance.on_disconnect)
-                cls._instance.socketio.on_event('control_conveyor', cls._instance.on_control_conveyor)
-                cls._instance.socketio.on_event('update_conveyor_stop', cls._instance.update_conveyor_stop)
+                cls._instance.socketio.on_event('control_conveyor', cls._instance.on_control_conveyor) # control conveyor commad from the UI
+                cls._instance.socketio.on_event('update_conveyor_stop', cls._instance.update_conveyor_stop) # Esp32 updates the conveyor status after receiving the command and stopping the conveyor
                 cls._instance.socketio.on_event('status_update', cls._instance.emit_status) # emit status to all clients
 
             return cls._instance

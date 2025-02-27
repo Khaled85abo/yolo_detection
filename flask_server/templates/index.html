@@ -128,14 +128,24 @@
             // socket.emit('control_conveyor', { state: state });
             fetch('/api/control_conveyor', {
                 method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify({ state: state })
-            });
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Control conveyor response:', data)
+                    updateStatus();
+                })
+                .catch(err => console.error('Error controlling conveyor:', err));
+
 
         };
 
         // Reduce polling frequency to reduce server load
         updateStatus();
-        setInterval(updateStatus, 10000);
+        setInterval(updateStatus, 2000);
     </script>
 
     <!-- Connection Status Display -->
