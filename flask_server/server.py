@@ -5,11 +5,11 @@ import threading
 from queue import Queue
 import logging
 from typing import Dict, List
-import eventlet
+# import eventlet
 import os
 
 # Initialize eventlet for better async performance
-eventlet.monkey_patch()
+# eventlet.monkey_patch()
 
 class PlankStatus:
     def __init__(self):

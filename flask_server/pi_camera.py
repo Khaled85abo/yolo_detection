@@ -553,7 +553,7 @@ def main():
         print("Cleaning up...")
         picam2.stop()
         # out_cls.release(writer_key='camera1')
-        # Use regular time.sleep instead of eventlet.sleep
+        # allow time for the server to close
         time.sleep(0.5)
         print("Done!")
 
