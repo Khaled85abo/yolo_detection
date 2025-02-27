@@ -61,7 +61,7 @@ class StreamServer:
                 cls._instance.socketio.on_event('disconnect', cls._instance.on_disconnect)
                 cls._instance.socketio.on_event('control_conveyor', cls._instance.on_control_conveyor)
                 cls._instance.socketio.on_event('update_conveyor_stop', cls._instance.update_conveyor_stop)
-                cls._instance.socketio.on_event('status_update', cls._instance.emit_status)
+                cls._instance.socketio.on_event('status_update', cls._instance.emit_status) # emit status to all clients
 
             return cls._instance
 

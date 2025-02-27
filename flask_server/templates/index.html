@@ -73,12 +73,16 @@
                 console.log('Connected to server');
                 connectionStatus = 'connected';
                 document.getElementById('connection-status').textContent = 'Connected';
-                updateStatus();
             });
 
             socket.on('connect_error', function (error) {
                 console.error('Connection error:', error);
                 document.getElementById('connection-status').textContent = 'Connection Error';
+            });
+
+            socket.on("status_update", function (data) {
+                console.log('Status update received:', data);
+                updateStatusDisplay(data);
             });
 
             socket.on('disconnect', function (reason) {
@@ -99,20 +103,15 @@
 
             socket.on('status_update', function (data) {
                 console.log('Status update received:', data);
-                updateStatus(data);
+                updateStatusDisplay(data);
             });
 
             function updateStatus(data) {
-                if (!data) {
-                    if (connectionStatus === 'connected') {
-                        fetch('/api/status')
-                            .then(response => response.json())
-                            .then(data => updateStatusDisplay(data))
-                            .catch(err => console.error('Error fetching status:', err));
-                    }
-                } else {
-                    updateStatusDisplay(data);
-                }
+                fetch('/api/status')
+                    .then(response => response.json())
+                    .then(data => updateStatusDisplay(data))
+                    .catch(err => console.error('Error fetching status:', err));
+
             }
 
             function updateStatusDisplay(data) {
@@ -128,6 +127,11 @@
             window.controlConveyor = function (state) {
                 console.log("Control conveyor action:", state);
                 socket.emit('control_conveyor', { state: state });
+                fetch('/api/control_conveyor', {
+                    method: 'POST',
+                    body: JSON.stringify({ state: state })
+                });
+
             };
 
             window.acknowledge = function (type) {
@@ -136,7 +140,7 @@
             };
 
             // Reduce polling frequency to reduce server load
-            // setInterval(updateStatus, 10000);
+            setInterval(updateStatus, 10000);
         });
     </script>
 
