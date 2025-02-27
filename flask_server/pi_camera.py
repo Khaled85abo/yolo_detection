@@ -476,12 +476,10 @@ def main():
 
     # Initialize video output
     try:
-        sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-        from output_video import OutputVideo
-        out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, 
-                             target_width=roi_width, target_height=target_height)
+        from video_output_class import OutputVideo
+        out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, target_width=roi_width, target_height=target_height)
         out_cls.create_writer(name='camera1', subfolder='pi')
-        print(f"Successfully created video writer: {out_cls.get_output_path('camera1')}")
+
     except Exception as e:
         print(f"Failed to initialize OutputVideo: {str(e)}")
         return
