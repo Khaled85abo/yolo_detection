@@ -1,12 +1,12 @@
-import eventlet
-eventlet.monkey_patch()
+# Remove eventlet from the top - it's interfering with camera processing
+# import eventlet
+# eventlet.monkey_patch()
 
 import cv2
 import numpy as np
 from ultralytics import YOLO
 from deep_sort_realtime.deepsort_tracker import DeepSort
 import torch
-# Add this at the top with other imports
 from collections import defaultdict
 from picamera2 import Picamera2
 import time
@@ -18,6 +18,7 @@ import asyncio
 import json
 from enum import Enum, auto
 from typing import Optional, Dict, List
+import sys
 # from mc.ESP32Controller import ESP32Controller, PlankStatus, WarningLevel
 
 # Add this as a global variable
@@ -462,7 +463,7 @@ def main():
     picam2.start()
 
     try:
-        # from stream_server_flask import StreamServer
+        # Import StreamServer from your local server module
         from server import StreamServer
         print("Starting stream server...")
         server = StreamServer()
@@ -473,13 +474,14 @@ def main():
         print(f"Failed to start stream server: {e}")
         return
 
-    global output_path
-
+    # Initialize video output
     try:
-        from video_output_class import OutputVideo
-        out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, target_width=roi_width, target_height=target_height)
+        sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+        from output_video import OutputVideo
+        out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, 
+                             target_width=roi_width, target_height=target_height)
         out_cls.create_writer(name='camera1', subfolder='pi')
-
+        print(f"Successfully created video writer: {out_cls.get_output_path('camera1')}")
     except Exception as e:
         print(f"Failed to initialize OutputVideo: {str(e)}")
         return
@@ -492,7 +494,7 @@ def main():
         # frame_processor = AsyncFrameProcessor(esp32)
         
         frame_count = 0
-        while True:
+        while True:  # Use a simple Python loop, not eventlet
             frame_count += 1
             print(f"\n--- Frame {frame_count} ---")
             
@@ -506,37 +508,8 @@ def main():
             roi_x_start = int(target_width * ROI_start)
             roi_x_end = int(target_width * ROI_end)
             
-            # First, maintain original aspect ratio by keeping the full height
+            # Extract ROI
             cropped_frame = frame[:, roi_x_start:roi_x_end]
-
-            
-            # Resize maintaining aspect ratio
-            aspect_ratio = cropped_frame.shape[1] / cropped_frame.shape[0]
-            if aspect_ratio > (target_width / target_height):
-                new_width = target_width
-                new_height = int(target_width / aspect_ratio)
-                vertical_padding = (target_height - new_height) // 2
-                frame = cv2.resize(cropped_frame, (new_width, new_height))
-                # Add padding
-                frame = cv2.copyMakeBorder(frame, vertical_padding, vertical_padding, 
-                                         0, 0, cv2.BORDER_CONSTANT, value=[0, 0, 0])
-            else:
-                new_height = target_height
-                new_width = int(target_height * aspect_ratio)
-                horizontal_padding = (target_width - new_width) // 2
-                frame = cv2.resize(cropped_frame, (new_width, new_height))
-                # Add padding
-                frame = cv2.copyMakeBorder(frame, 0, 0, horizontal_padding, 
-                                         horizontal_padding, cv2.BORDER_CONSTANT, value=[0, 0, 0])
-            
-            # Add dimension check
-            current_height, current_width = frame.shape[:2]
-            if current_width != roi_width or current_height != target_height:
-                print(f"Warning: Frame dimensions ({current_width}x{current_height}) "
-                      f"don't match expected dimensions ({roi_width}x{target_height})")
-            
-            
-
             
             # Process frame
             process_start = time.time()
@@ -580,7 +553,7 @@ def main():
         print("Cleaning up...")
         picam2.stop()
         out_cls.release(writer_key='camera1')
-        # Give the server thread a moment to clean up
+        # Use regular time.sleep instead of eventlet.sleep
         time.sleep(0.5)
         print("Done!")
 
