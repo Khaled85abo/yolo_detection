@@ -58,90 +58,84 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // Initialize Socket.IO with explicit configuration
-            const socket = io({
-                reconnectionAttempts: 5,
-                reconnectionDelay: 1000,
-                timeout: 20000,
-                transports: ['websocket', 'polling']
-            });
+        // Initialize Socket.IO with explicit configuration
+        // const socket = io({
+        //     reconnectionAttempts: 5,
+        //     reconnectionDelay: 1000,
+        //     timeout: 20000,
+        //     transports: ['websocket', 'polling']
+        // });
 
-            let connectionStatus = 'disconnected';
+        let connectionStatus = 'disconnected';
 
-            socket.on('connect', function () {
-                console.log('Connected to server');
-                connectionStatus = 'connected';
-                document.getElementById('connection-status').textContent = 'Connected';
-            });
+        // socket.on('connect', function () {
+        //     console.log('Connected to server');
+        //     connectionStatus = 'connected';
+        //     document.getElementById('connection-status').textContent = 'Connected';
+        // });
 
-            socket.on('connect_error', function (error) {
-                console.error('Connection error:', error);
-                document.getElementById('connection-status').textContent = 'Connection Error';
-            });
+        // socket.on('connect_error', function (error) {
+        //     console.error('Connection error:', error);
+        //     document.getElementById('connection-status').textContent = 'Connection Error';
+        // });
 
-            socket.on("status_update", function (data) {
-                console.log('Status update received:', data);
-                updateStatusDisplay(data);
-            });
+        // socket.on("status_update", function (data) {
+        //     console.log('Status update received:', data);
+        //     updateStatusDisplay(data);
+        // });
 
-            socket.on('disconnect', function (reason) {
-                console.log('Disconnected from server:', reason);
-                connectionStatus = 'disconnected';
-                document.getElementById('connection-status').textContent = 'Disconnected';
+        // socket.on('disconnect', function (reason) {
+        //     console.log('Disconnected from server:', reason);
+        //     connectionStatus = 'disconnected';
+        //     document.getElementById('connection-status').textContent = 'Disconnected';
 
-                // Auto-reconnect if not intentional
-                if (reason !== 'io client disconnect') {
-                    setTimeout(() => {
-                        if (connectionStatus === 'disconnected') {
-                            console.log('Attempting to reconnect...');
-                            socket.connect();
-                        }
-                    }, 2000);
-                }
-            });
+        //     // Auto-reconnect if not intentional
+        //     if (reason !== 'io client disconnect') {
+        //         setTimeout(() => {
+        //             if (connectionStatus === 'disconnected') {
+        //                 console.log('Attempting to reconnect...');
+        //                 socket.connect();
+        //             }
+        //         }, 2000);
+        //     }
+        // });
 
-            socket.on('status_update', function (data) {
-                console.log('Status update received:', data);
-                updateStatusDisplay(data);
-            });
+        // socket.on('status_update', function (data) {
+        //     console.log('Status update received:', data);
+        //     updateStatusDisplay(data);
+        // });
 
-            function updateStatus(data) {
-                fetch('/api/status')
-                    .then(response => response.json())
-                    .then(data => updateStatusDisplay(data))
-                    .catch(err => console.error('Error fetching status:', err));
+        function updateStatus(data) {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => updateStatusDisplay(data))
+                .catch(err => console.error('Error fetching status:', err));
 
-            }
+        }
 
-            function updateStatusDisplay(data) {
-                console.log('Updating status display:', data);
-                document.getElementById('status').innerHTML = `
+        function updateStatusDisplay(data) {
+            console.log('Updating status display:', data);
+            document.getElementById('status').innerHTML = `
                     <p>Conveyor Status: <strong>${data.conveyor_stop ? 'Stopped' : 'Running'}</strong></p>
                     <p>Overlapped Planks: <strong>${data.overlap ? 'Yes' : 'No'}</strong></p>
                     <p>Stopped Planks: <strong>${data.stop ? 'Yes' : 'No'}</strong></p>
                     <p>Incorrect Planks: <strong>${data.incorrect ? 'Yes' : 'No'}</strong></p>
                 `;
-            }
+        }
 
-            window.controlConveyor = function (state) {
-                console.log("Control conveyor action:", state);
-                socket.emit('control_conveyor', { state: state });
-                fetch('/api/control_conveyor', {
-                    method: 'POST',
-                    body: JSON.stringify({ state: state })
-                });
+        window.controlConveyor = function (state) {
+            console.log("Control conveyor action:", state);
+            // socket.emit('control_conveyor', { state: state });
+            fetch('/api/control_conveyor', {
+                method: 'POST',
+                body: JSON.stringify({ state: state })
+            });
 
-            };
+        };
 
-            window.acknowledge = function (type) {
-                console.log("Acknowledging:", type);
-                // Add acknowledgment logic here
-            };
-
-            // Reduce polling frequency to reduce server load
-            setInterval(updateStatus, 10000);
-        });
+        // Reduce polling frequency to reduce server load
+        updateStatus();
+        setInterval(updateStatus, 10000);
     </script>
 
     <!-- Connection Status Display -->
