@@ -474,17 +474,17 @@ def main():
         print(f"Failed to start stream server: {e}")
         return
 
-    # Initialize video output
-    try:
-        sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-        from output_video import OutputVideo
-        out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, 
-                             target_width=roi_width, target_height=target_height)
-        out_cls.create_writer(name='camera1', subfolder='pi')
-        print(f"Successfully created video writer: {out_cls.get_output_path('camera1')}")
-    except Exception as e:
-        print(f"Failed to initialize OutputVideo: {str(e)}")
-        return
+    # # Initialize video output
+    # try:
+    #     sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+    #     from output_video import OutputVideo
+    #     out_cls = OutputVideo(base_directory=output_path, fps=custom_fps, 
+    #                          target_width=roi_width, target_height=target_height)
+    #     out_cls.create_writer(name='camera1', subfolder='pi')
+    #     print(f"Successfully created video writer: {out_cls.get_output_path('camera1')}")
+    # except Exception as e:
+    #     print(f"Failed to initialize OutputVideo: {str(e)}")
+    #     return
 
 
 
@@ -534,7 +534,7 @@ def main():
             
             # Write original frame to video file
             out_write_start = time.time()
-            out_cls.write_frame(frame, writer_key='camera1')
+            # out_cls.write_frame(frame, writer_key='camera1')
             out_write_end = time.time()
             
             loop_end = time.time()
@@ -552,7 +552,7 @@ def main():
     finally:
         print("Cleaning up...")
         picam2.stop()
-        out_cls.release(writer_key='camera1')
+        # out_cls.release(writer_key='camera1')
         # Use regular time.sleep instead of eventlet.sleep
         time.sleep(0.5)
         print("Done!")
