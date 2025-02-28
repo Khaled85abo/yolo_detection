@@ -211,7 +211,7 @@ class StreamServer:
         # Pass camera IDs and frame size to the template
         camera_ids = list(self.cameras.keys())
         
-        return render_template('index.html', 
+        return render_template('index-socketio.html', 
                               camera_ids=camera_ids,
                               frame_size=self.frame_size)
     

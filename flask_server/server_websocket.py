@@ -269,7 +269,6 @@ class StreamServer:
             kwargs={
                 'debug': False, 
                 'use_reloader': False,
-                'log_output': False  # Reduce logging to console
             }
         )
         server_thread.daemon = True
