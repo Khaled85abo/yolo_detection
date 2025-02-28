@@ -45,7 +45,9 @@ class StreamServer:
                 cls._instance.app.route('/api/control_conveyor', methods=['POST'])(cls._instance.control_conveyor)
                 
                 # Add websocket route
-                cls._instance.app.route('/ws')(cls._instance.websocket_route)
+                # cls._instance.app.route('/ws')(cls._instance.websocket_route)
+                cls._instance.app.route('/ws', methods=['GET', 'POST'], websocket=True)(cls._instance.websocket_route)
+
 
             return cls._instance
 
