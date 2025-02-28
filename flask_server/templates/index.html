@@ -3,7 +3,6 @@
 
 <head>
     <title>Plank Detection System</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.6.0/socket.io.min.js"></script>
     <style>
         .status {
             padding: 10px;
@@ -58,55 +57,75 @@
     </div>
 
     <script>
-        // Initialize Socket.IO with explicit configuration
-        const socket = io({
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000,
-            timeout: 5000,
-            transports: ['websocket', 'polling']
-        });
-
+        // Replace Socket.IO with native WebSocket
+        let socket;
         let connectionStatus = 'disconnected';
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+        const reconnectDelay = 1000;
 
-        socket.on('connect', function () {
-            console.log('Connected to server websocket');
-            connectionStatus = 'connected';
-            document.getElementById('connection-status').textContent = 'Connected';
-        });
+        function connectWebSocket() {
+            // Create WebSocket connection
+            const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+            const wsUrl = protocol + window.location.host + '/ws';
 
-        socket.on('connect_error', function (error) {
-            console.error('Connection error websocket:', error);
-            document.getElementById('connection-status').textContent = 'Connection Error';
-        });
+            console.log('Connecting to WebSocket at:', wsUrl);
+            socket = new WebSocket(wsUrl);
 
-        socket.on("status_update", function (data) {
-            console.log('Status update received:', data);
-            updateStatusDisplay(data);
-        });
+            socket.onopen = function () {
+                console.log('Connected to server websocket');
+                connectionStatus = 'connected';
+                document.getElementById('connection-status').textContent = 'Connected';
+                reconnectAttempts = 0;
+            };
 
-        socket.on('disconnect', function (reason) {
-            console.log('Disconnected from server websocket:', reason);
-            connectionStatus = 'disconnected';
-            document.getElementById('connection-status').textContent = 'Disconnected';
+            socket.onmessage = function (event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('Message received:', data);
 
-            // Auto-reconnect if not intentional
-            if (reason !== 'io client disconnect') {
-                setTimeout(() => {
-                    if (connectionStatus === 'disconnected') {
-                        console.log('Attempting to reconnect...');
-                        socket.connect();
+                    // Handle different event types
+                    if (data.event === 'status_update') {
+                        updateStatusDisplay(data.data);
                     }
-                }, 2000);
-            }
-        });
+                    // Add more event handlers as needed
+                } catch (error) {
+                    console.error('Error parsing message:', error);
+                }
+            };
 
+            socket.onerror = function (error) {
+                console.error('WebSocket error:', error);
+                document.getElementById('connection-status').textContent = 'Connection Error';
+            };
 
-        function updateStatus(data) {
+            socket.onclose = function (event) {
+                console.log('Disconnected from server websocket:', event.reason);
+                connectionStatus = 'disconnected';
+                document.getElementById('connection-status').textContent = 'Disconnected';
+
+                // Handle reconnection
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    reconnectAttempts++;
+                    const delay = reconnectDelay * reconnectAttempts;
+                    console.log(`Attempting to reconnect in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})...`);
+
+                    setTimeout(connectWebSocket, delay);
+                } else {
+                    console.log('Max reconnection attempts reached');
+                    document.getElementById('connection-status').textContent = 'Reconnection Failed';
+                }
+            };
+        }
+
+        // Connect when page loads
+        connectWebSocket();
+
+        function updateStatus() {
             fetch('/api/status')
                 .then(response => response.json())
                 .then(data => updateStatusDisplay(data))
                 .catch(err => console.error('Error fetching status:', err));
-
         }
 
         function updateStatusDisplay(data) {
@@ -121,27 +140,37 @@
 
         window.controlConveyor = function (state) {
             console.log("Control conveyor action:", state);
-            // socket.emit('control_conveyor', { state: state });
-            fetch('/api/control_conveyor', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ state: state })
-            })
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Control conveyor response:', data)
-                    updateStatus();
+
+            // Using WebSocket to control conveyor when connected
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                const message = JSON.stringify({
+                    event: 'control_conveyor',
+                    data: { state: state }
+                });
+                socket.send(message);
+                console.log('Sent via WebSocket:', message);
+            } else {
+                // Fallback to HTTP API if WebSocket is not connected
+                console.log('WebSocket not connected, using HTTP API');
+                fetch('/api/control_conveyor', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ state: state })
                 })
-                .catch(err => console.error('Error controlling conveyor:', err));
-
-
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Control conveyor response:', data);
+                        updateStatus();
+                    })
+                    .catch(err => console.error('Error controlling conveyor:', err));
+            }
         };
 
-        // Reduce polling frequency to reduce server load
+        // Optional manual status updates as backup
         // updateStatus();
-        // setInterval(updateStatus, 2000);
+        // setInterval(updateStatus, 5000);
     </script>
 
     <!-- Connection Status Display -->

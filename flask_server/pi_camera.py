@@ -54,7 +54,7 @@ def main():
 
     try:
         # Import StreamServer from your local server module
-        from server import StreamServer
+        from server_websocket import StreamServer
         print("Starting stream server...")
         server = StreamServer()
         server.add_camera('camera1', frame_size=(roi_width, target_height))
