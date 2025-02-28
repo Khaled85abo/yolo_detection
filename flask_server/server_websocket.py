@@ -55,24 +55,35 @@ class StreamServer:
 
     def websocket_route(self):
         """Handle websocket connections"""
-        ws = WebSocketServer(request.environ)
-        self.clients.append(ws)
-        print("Client connected")
-        
-        # Emit initial status immediately after connection
-        self.emit_status()
-        
         try:
-            while True:
-                message = ws.receive()
-                if message:
-                    self.handle_websocket_message(ws, message)
-        except ConnectionClosed:
-            print("Client disconnected")
-        finally:
-            if ws in self.clients:
-                self.clients.remove(ws)
-        return ''
+            # Explicitly print debugging info
+            print("WebSocket connection attempt received")
+            ws = WebSocketServer(request.environ)
+            print("WebSocket connection established successfully")
+            self.clients.append(ws)
+            print(f"Client connected. Total clients: {len(self.clients)}")
+            
+            # Emit initial status immediately after connection
+            self.emit_status()
+            
+            try:
+                while True:
+                    message = ws.receive()
+                    if message:
+                        print(f"Received message: {message}")
+                        self.handle_websocket_message(ws, message)
+            except ConnectionClosed:
+                print("Client disconnected")
+            finally:
+                if ws in self.clients:
+                    self.clients.remove(ws)
+                    print(f"Client removed. Remaining clients: {len(self.clients)}")
+            return ''
+        except Exception as e:
+            print(f"Error in websocket_route: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return str(e), 500  # Return error with 500 status code
         
     def handle_websocket_message(self, ws, message):
         """Process incoming websocket messages"""
@@ -259,7 +270,16 @@ class StreamServer:
         """Run the Flask server"""
         # Disable debug mode and reduce logging
         logging.getLogger('werkzeug').setLevel(logging.ERROR)
-        self.app.run(host=host, port=port, debug=False, use_reloader=False, log_output=False)
+        
+        # Add CORS headers for WebSocket compatibility
+        @self.app.after_request
+        def add_cors_headers(response):
+            response.headers['Access-Control-Allow-Origin'] = '*'
+            response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+            response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
+            return response
+        
+        self.app.run(host=host, port=port, debug=False, use_reloader=False)
     
     def run_threaded(self, host='0.0.0.0', port=5000):
         """Run the Flask server with SocketIO in a separate thread with better configuration"""

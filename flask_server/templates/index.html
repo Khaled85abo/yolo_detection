@@ -61,7 +61,7 @@
         let socket;
         let connectionStatus = 'disconnected';
         let reconnectAttempts = 0;
-        const maxReconnectAttempts = 5;
+        const maxReconnectAttempts = 10;
         const reconnectDelay = 1000;
 
         function connectWebSocket() {
@@ -70,6 +70,16 @@
             const wsUrl = protocol + window.location.host + '/ws';
 
             console.log('Connecting to WebSocket at:', wsUrl);
+
+            // Close existing socket if it exists
+            if (socket) {
+                try {
+                    socket.close();
+                } catch (e) {
+                    console.error("Error closing existing socket:", e);
+                }
+            }
+
             socket = new WebSocket(wsUrl);
 
             socket.onopen = function () {
@@ -80,9 +90,10 @@
             };
 
             socket.onmessage = function (event) {
+                console.log('Raw message received:', event.data);
                 try {
                     const data = JSON.parse(event.data);
-                    console.log('Message received:', data);
+                    console.log('Parsed message:', data);
 
                     // Handle different event types
                     if (data.event === 'status_update') {
@@ -90,13 +101,18 @@
                     }
                     // Add more event handlers as needed
                 } catch (error) {
-                    console.error('Error parsing message:', error);
+                    console.error('Error parsing message:', error, event.data);
                 }
             };
 
             socket.onerror = function (error) {
                 console.error('WebSocket error:', error);
                 document.getElementById('connection-status').textContent = 'Connection Error';
+
+                // Try to reconnect immediately on error
+                if (connectionStatus === 'connected') {
+                    setTimeout(connectWebSocket, 1000);
+                }
             };
 
             socket.onclose = function (event) {
@@ -107,7 +123,7 @@
                 // Handle reconnection
                 if (reconnectAttempts < maxReconnectAttempts) {
                     reconnectAttempts++;
-                    const delay = reconnectDelay * reconnectAttempts;
+                    const delay = reconnectDelay * Math.min(reconnectAttempts, 5); // Cap the delay multiplication
                     console.log(`Attempting to reconnect in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})...`);
 
                     setTimeout(connectWebSocket, delay);
@@ -118,8 +134,20 @@
             };
         }
 
-        // Connect when page loads
-        connectWebSocket();
+        // Initial connection
+        window.addEventListener('load', connectWebSocket);
+
+        // Add a ping function to keep the connection alive
+        setInterval(function () {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                try {
+                    socket.send(JSON.stringify({ event: 'ping', data: {} }));
+                    console.log('Ping sent');
+                } catch (e) {
+                    console.error('Error sending ping:', e);
+                }
+            }
+        }, 30000); // Send ping every 30 seconds
 
         function updateStatus() {
             fetch('/api/status')
