@@ -3,7 +3,29 @@ import numpy as np
 
 def draw_boxes_and_orientations(frame, tracked_objects, orientations, roi_bounds):
     """
-    Draw bounding boxes, track IDs, and orientations on the frame
+    Draw bounding boxes, track IDs, and orientations on the frame.
+    
+    This function visualizes tracked objects with their orientation information:
+    1. Draws rotated bounding boxes around detected objects with color coding:
+       - Green: Correctly oriented objects
+       - Red: Incorrectly oriented objects
+       - Gray: Unknown orientation
+    2. Displays text labels with track ID, orientation status, and aspect ratio
+    3. Adds special visual indicators for stopped objects (thicker yellow border)
+    4. Detects and highlights overlapping objects with semi-transparent red fill
+       and warning text
+    
+    The function handles label positioning to avoid overlaps between labels.
+    
+    Args:
+        frame: The image/video frame to draw on
+        tracked_objects: List of tracking objects with position information
+        orientations: List of tuples containing orientation data (points, angle, 
+                     orientation, aspect_ratio, etc.)
+        roi_bounds: Region of interest boundaries
+        
+    Returns:
+        frame: The modified frame with all visual elements added
     """
     used_positions = {}
 

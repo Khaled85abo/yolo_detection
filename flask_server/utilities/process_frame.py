@@ -15,7 +15,32 @@ orientation_memory = defaultdict(lambda: {"orientation": "unknown", "angle": 0, 
 
 def process_frame(frame, model, tracker, server):
     """
-    Process each frame for object detection and orientation tracking
+    Process each frame for object detection, tracking, orientation analysis, and status monitoring.
+    
+    This function is the main processing pipeline that:
+    1. Performs object detection using a YOLO model to identify planks
+    2. Filters detections based on confidence and minimum size thresholds
+    3. Tracks objects across frames to maintain consistent IDs
+    4. Analyzes each plank's orientation (correct/vertical vs incorrect/horizontal)
+    5. Detects when planks have stopped moving
+    6. Identifies overlapping planks that may cause issues
+    7. Updates the server with the current status of all tracked objects
+    8. Measures and reports performance metrics for each processing stage
+    
+    The function maintains memory of object orientations and movement history
+    across frames to provide stable tracking and status detection.
+    
+    Args:
+        frame: The input video frame to process
+        model: The YOLO object detection model
+        tracker: Object tracker that maintains object IDs across frames
+        server: Server instance to update with current detection status
+        
+    Returns:
+        tuple: (tracked_objects, final_orientations, roi_bounds)
+            - tracked_objects: List of tracked objects with position and ID information
+            - final_orientations: List of orientation data for each tracked object
+            - roi_bounds: Region of interest boundaries (start_x, end_x)
     """
     global orientation_memory, stop_detection_memory
     

@@ -159,10 +159,10 @@
         function updateStatusDisplay(data) {
             console.log('Updating status display:', data);
             document.getElementById('status').innerHTML = `
-                    <p>Conveyor Status: <strong>${data.conveyor_stop ? 'Stopped' : 'Running'}</strong></p>
-                    <p>Overlapped Planks: <strong>${data.overlap ? 'Yes' : 'No'}</strong></p>
-                    <p>Stopped Planks: <strong>${data.stop ? 'Yes' : 'No'}</strong></p>
-                    <p>Incorrect Planks: <strong>${data.incorrect ? 'Yes' : 'No'}</strong></p>
+                    <p>Conveyor: <strong>${data.conveyor_stop ? '⛔ STOPPED' : '✅ RUNNING'}</strong></p>
+                    <p>Overlapped: <strong>${data.overlap ? '⚠️ YES' : '✅ NO'}</strong></p>
+                    <p>Stopped: <strong>${data.stop ? '⚠️ YES' : '✅ NO'}</strong></p>
+                    <p>Incorrect: <strong>${data.incorrect ? '⚠️ YES' : '✅ NO'}</strong></p>
                 `;
         }
 

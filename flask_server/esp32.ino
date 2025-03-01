@@ -18,11 +18,16 @@ const int PLANK_STOP_LED = 19;     // stop
 const int PLANK_OVERLAP_LED = 4;   // overlap
 const int PLANK_INCORRECT_LED = 5; // incorrect
 const int CONVEYOR_STOP_LED = 22;  // conveyor_stop
+
+const int CONVEYOR_START_LED_1 = 27; // Connect to IN1 of L298N
+const int CONVEYOR_START_LED_2 = 26; // Connect to IN2 of L298N
+
 // Global variables to store LED states
-bool plankStopLedActive = true;      // stop
-bool plankOverlapLedActive = true;   // overlap
-bool plankIncorrectLedActive = true; // incorrect
-bool conveyorStopLedActive = true;   // conveyor_stop
+bool plankStopLedActive = false;      // stop
+bool plankOverlapLedActive = false;   // overlap
+bool plankIncorrectLedActive = false; // incorrect
+bool conveyorStopLedActive = false;   // conveyor_stop
+
 WebServer server(80);
 
 // Replace SocketIOclient with WebSocketsClient
@@ -146,6 +151,8 @@ void setup()
     pinMode(PLANK_OVERLAP_LED, OUTPUT);
     pinMode(PLANK_INCORRECT_LED, OUTPUT);
     pinMode(CONVEYOR_STOP_LED, OUTPUT);
+    pinMode(CONVEYOR_START_LED_1, OUTPUT);
+    pinMode(CONVEYOR_START_LED_2, OUTPUT);
 
     // Route for root / web page
     server.on("/", HTTP_GET, []()
@@ -174,7 +181,7 @@ void loop()
     }
 
     // Handle LED blinking
-    if (currentMillis - lastBlinkTime >= BLINK_INTERVAL)
+    if (currentMillis - lastBlinkTime >= BLINK_INTERVAL && connected)
     {
         lastBlinkTime = currentMillis;
         ledState = !ledState;
@@ -189,6 +196,28 @@ void loop()
         if (conveyorStopLedActive)
             digitalWrite(CONVEYOR_STOP_LED, ledState ? HIGH : LOW);
     }
+    if (!connected)
+    {
+        digitalWrite(PLANK_STOP_LED, HIGH);
+        digitalWrite(PLANK_OVERLAP_LED, HIGH);
+        digitalWrite(PLANK_INCORRECT_LED, HIGH);
+    }
+}
+
+void startConveyor()
+{
+    digitalWrite(CONVEYOR_START_LED_1, HIGH);
+    digitalWrite(CONVEYOR_START_LED_2, LOW);
+    conveyorStopLedActive = false;
+    digitalWrite(CONVEYOR_STOP_LED, LOW);
+}
+
+void stopConveyor()
+{
+    digitalWrite(CONVEYOR_START_LED_1, LOW);
+    digitalWrite(CONVEYOR_START_LED_2, LOW);
+    conveyorStopLedActive = true;
+    digitalWrite(CONVEYOR_STOP_LED, HIGH);
 }
 
 // Helper function to send ping
@@ -222,6 +251,7 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
     case WStype_DISCONNECTED:
         Serial.println("WebSocket Disconnected!");
         connected = false;
+        stopConveyor();
         break;
 
     case WStype_CONNECTED:
@@ -230,6 +260,7 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         lastPing = millis();
         // Send initial status update after connection
         updateConveyorStatus();
+        startConveyor();
         break;
 
     case WStype_TEXT:
@@ -296,9 +327,14 @@ void handleConveyorControl(const JsonDocument &data)
 {
     if (data.containsKey("state"))
     {
-        conveyorStopLedActive = data["state"];
-        Serial.println("Conveyor control command received: " + String(conveyorStopLedActive));
+        Serial.println("Conveyor control command received: " + String(data["state"]));
         // Update the server about our new state
+        // if true, stop conveyor
+        if (data["state"])
+            stopConveyor();
+        else
+            startConveyor();
+
         updateConveyorStatus();
     }
 }
@@ -326,13 +362,13 @@ void handleStatusUpdate(const JsonDocument &data)
     plankStopLedActive = data["stop"];
     plankOverlapLedActive = data["overlap"];
     plankIncorrectLedActive = data["incorrect"];
-    conveyorStopLedActive = data["conveyor_stop"];
+    // conveyorStopLedActive = data["conveyor_stop"];
 
     Serial.println("Status update received:");
     Serial.println("  Stop: " + String(plankStopLedActive));
     Serial.println("  Overlap: " + String(plankOverlapLedActive));
     Serial.println("  Incorrect: " + String(plankIncorrectLedActive));
-    Serial.println("  Conveyor Stop: " + String(conveyorStopLedActive));
+    // Serial.println("  Conveyor Stop: " + String(conveyorStopLedActive));
 
     // If not active, ensure LEDs are off
     if (!plankStopLedActive)
@@ -341,6 +377,6 @@ void handleStatusUpdate(const JsonDocument &data)
         digitalWrite(PLANK_OVERLAP_LED, LOW);
     if (!plankIncorrectLedActive)
         digitalWrite(PLANK_INCORRECT_LED, LOW);
-    if (!conveyorStopLedActive)
-        digitalWrite(CONVEYOR_STOP_LED, LOW);
+    // if (!conveyorStopLedActive)
+    //     digitalWrite(CONVEYOR_STOP_LED, LOW);
 }
