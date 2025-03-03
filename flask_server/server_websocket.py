@@ -38,6 +38,13 @@ class StreamServer:
                 cls._instance.frame_size = (640, 480)  # Default frame size
                 cls._instance.clients = []  # List to store websocket connections
                 
+                # Add rules configuration
+                cls._instance.rules = {
+                    'overlap': 'ignore',
+                    'stop': 'ignore',
+                    'incorrect': 'ignore'
+                }
+                
                 # Add routes
                 cls._instance.app.route('/')(cls._instance.index)
                 cls._instance.app.route('/video_feed/<camera_id>')(cls._instance.video_feed)
@@ -47,8 +54,6 @@ class StreamServer:
                 # Add websocket route
                 # cls._instance.app.route('/ws')(cls._instance.websocket_route)
                 cls._instance.app.route('/ws', websocket=True)(cls._instance.websocket_route)
-
-
 
             return cls._instance
 
@@ -102,6 +107,12 @@ class StreamServer:
             # command from the ESP32 to update the conveyor status
             elif event_type == 'update_conveyor_stop':
                 self.update_conveyor_stop(payload)
+            # Handle rule updates from the client
+            elif event_type == 'update_rules':
+                self.update_rules(payload)
+            # Handle ping messages to keep connection alive
+            elif event_type == 'ping':
+                pass  # Just acknowledge receipt, no action needed
             # Add more event handlers as needed
             
         except json.JSONDecodeError:
@@ -115,7 +126,6 @@ class StreamServer:
         if isinstance(data, dict) and 'state' in data:
             state = data['state']
             self.send_to_all_clients({'event': 'control_conveyor', 'data': {'state': state}})
-
 
     def control_conveyor(self):
         """API endpoint to control conveyor
@@ -247,6 +257,8 @@ class StreamServer:
             prev_incorrect != self.plank_status.incorrect):
             print("State changed, emitting status update")
             self.emit_status()
+            # Apply rules after status update
+            self.apply_rules()
 
     def get_status(self):
         """API endpoint to get current status"""
@@ -258,7 +270,56 @@ class StreamServer:
             'conveyor_stop': self.plank_status.conveyor_stop
         })
 
-
+    def update_rules(self, rules_data):
+        """Update the rules configuration"""
+        try:
+            print(f"Updating rules: {rules_data}")
+            # Validate the rules data
+            if not isinstance(rules_data, dict):
+                print("Invalid rules data format")
+                return False
+                
+            # Update the rules
+            for key in ['overlap', 'stop', 'incorrect']:
+                if key in rules_data and rules_data[key] in ['ignore', 'stop_conveyor', 'alert']:
+                    self.rules[key] = rules_data[key]
+            
+            print(f"Rules updated: {self.rules}")
+            return True
+        except Exception as e:
+            print(f"Error updating rules: {e}")
+            return False
+            
+    def apply_rules(self):
+        """Apply the configured rules based on current status"""
+        try:
+            status = {
+                'overlap': len(self.plank_status.overlap) > 0,
+                'stop': len(self.plank_status.stop) > 0,
+                'incorrect': len(self.plank_status.incorrect) > 0
+            }
+            
+            # Check each condition and apply the configured action
+            actions_taken = []
+            
+            for condition, is_active in status.items():
+                if is_active and self.rules[condition] == 'stop_conveyor' and not self.plank_status.conveyor_stop:
+                    # Stop the conveyor
+                    self.plank_status.conveyor_stop = True
+                    self.send_to_all_clients({
+                        'event': 'control_conveyor', 
+                        'data': {'state': True}
+                    })
+                    actions_taken.append(f"Stopped conveyor due to {condition}")
+            
+            if actions_taken:
+                print(f"Rules applied: {', '.join(actions_taken)}")
+                self.emit_status()  # Update all clients with new status
+                
+            return True
+        except Exception as e:
+            print(f"Error applying rules: {e}")
+            return False
 
     def index(self):
         """Render the template-based index page"""

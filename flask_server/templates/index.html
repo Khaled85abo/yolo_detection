@@ -26,6 +26,38 @@
         .camera-feed {
             margin-bottom: 20px;
         }
+
+        /* New styles for rule configuration */
+        .rule-configuration {
+            margin: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .rule-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .rule-item {
+            flex: 1;
+            min-width: 250px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            background-color: white;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
     </style>
 </head>
 
@@ -49,6 +81,40 @@
         <button onclick="controlConveyor(false)" style="background-color: #44ff44;">Start Conveyor</button>
     </div>
 
+    <!-- Rule Configuration Section -->
+    <div class="rule-configuration">
+        <h2>Rule Configuration</h2>
+        <div class="rule-container">
+            <div class="rule-item">
+                <h3>When Overlap Detected:</h3>
+                <select id="overlap-action" onchange="updateRule('overlap', this.value)">
+                    <option value="ignore">Ignore</option>
+                    <option value="stop_conveyor">Stop Conveyor</option>
+                    <option value="alert">Alert Only</option>
+                </select>
+            </div>
+
+            <div class="rule-item">
+                <h3>When Stopped Plank Detected:</h3>
+                <select id="stop-action" onchange="updateRule('stop', this.value)">
+                    <option value="ignore">Ignore</option>
+                    <option value="stop_conveyor">Stop Conveyor</option>
+                    <option value="alert">Alert Only</option>
+                </select>
+            </div>
+
+            <div class="rule-item">
+                <h3>When Incorrect Plank Detected:</h3>
+                <select id="incorrect-action" onchange="updateRule('incorrect', this.value)">
+                    <option value="ignore">Ignore</option>
+                    <option value="stop_conveyor">Stop Conveyor</option>
+                    <option value="alert">Alert Only</option>
+                </select>
+            </div>
+        </div>
+        <button onclick="saveRules()" style="background-color: #4488ff; margin-top: 10px;">Save Rules</button>
+    </div>
+
     <div id="warnings">
         <div id="stopped" class="warning inactive">
             <h3>Stopped Plank</h3>
@@ -63,6 +129,75 @@
         let reconnectAttempts = 0;
         const maxReconnectAttempts = 10;
         const reconnectDelay = 1000;
+
+        // Rules configuration
+        let rules = {
+            overlap: 'ignore',
+            stop: 'ignore',
+            incorrect: 'ignore'
+        };
+
+        // Load saved rules from localStorage if available
+        function loadSavedRules() {
+            const savedRules = localStorage.getItem('plankDetectionRules');
+            if (savedRules) {
+                rules = JSON.parse(savedRules);
+
+                // Update the UI to reflect saved rules
+                document.getElementById('overlap-action').value = rules.overlap;
+                document.getElementById('stop-action').value = rules.stop;
+                document.getElementById('incorrect-action').value = rules.incorrect;
+
+                console.log('Loaded saved rules:', rules);
+            }
+        }
+
+        // Update rule in memory
+        function updateRule(condition, action) {
+            rules[condition] = action;
+            console.log(`Rule updated: When ${condition} detected, ${action}`);
+        }
+
+        // Save rules to localStorage and send to server
+        function saveRules() {
+            localStorage.setItem('plankDetectionRules', JSON.stringify(rules));
+
+            // Send rules to server if WebSocket is connected
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    event: 'update_rules',
+                    data: rules
+                }));
+                console.log('Rules sent to server:', rules);
+                alert('Rules saved successfully!');
+            } else {
+                console.error('WebSocket not connected, rules saved locally only');
+                alert('Rules saved locally. Server connection unavailable.');
+            }
+        }
+
+        // Apply rules based on status updates
+        function applyRules(status) {
+            console.log('Applying rules to status:', status);
+
+            // Check each condition and apply the configured action
+            if (status.overlap && rules.overlap === 'stop_conveyor') {
+                controlConveyor(true); // Stop the conveyor
+                console.log('Rule applied: Stopping conveyor due to overlap');
+            }
+
+            if (status.stop && rules.stop === 'stop_conveyor') {
+                controlConveyor(true); // Stop the conveyor
+                console.log('Rule applied: Stopping conveyor due to stopped plank');
+            }
+
+            if (status.incorrect && rules.incorrect === 'stop_conveyor') {
+                controlConveyor(true); // Stop the conveyor
+                console.log('Rule applied: Stopping conveyor due to incorrect plank');
+            }
+
+            // Alert handling could be added here for 'alert' actions
+        }
 
         function connectWebSocket() {
             // Create WebSocket connection
@@ -87,6 +222,15 @@
                 connectionStatus = 'connected';
                 document.getElementById('connection-status').textContent = 'Connected';
                 reconnectAttempts = 0;
+
+                // Send current rules to server on connection
+                if (Object.keys(rules).length > 0) {
+                    socket.send(JSON.stringify({
+                        event: 'update_rules',
+                        data: rules
+                    }));
+                    console.log('Sent rules to server on connection');
+                }
             };
 
             socket.onmessage = function (event) {
@@ -98,6 +242,7 @@
                     // Handle different event types
                     if (data.event === 'status_update') {
                         updateStatusDisplay(data.data);
+                        applyRules(data.data); // Apply rules to the new status
                     }
                     // Add more event handlers as needed
                 } catch (error) {
@@ -134,8 +279,11 @@
             };
         }
 
-        // Initial connection
-        window.addEventListener('load', connectWebSocket);
+        // Initial connection and rule loading
+        window.addEventListener('load', function () {
+            connectWebSocket();
+            loadSavedRules();
+        });
 
         // Add a ping function to keep the connection alive
         setInterval(function () {
