@@ -15,6 +15,32 @@ class PlankStatus:
         self.incorrect: List[int] = []
         self.conveyor_stop: bool = False
 
+class CameraRegistry:
+    def __init__(self):
+        self.cameras = {}  # Dictionary of registered cameras
+        self.lock = threading.Lock()
+        
+    def register_camera(self, camera_id, camera_info):
+        """Register a camera with the server"""
+        with self.lock:
+            self.cameras[camera_id] = camera_info
+            print(f"Camera registered: {camera_id} - {camera_info['url']}")
+            return True
+            
+    def unregister_camera(self, camera_id):
+        """Remove a camera from the registry"""
+        with self.lock:
+            if camera_id in self.cameras:
+                del self.cameras[camera_id]
+                print(f"Camera unregistered: {camera_id}")
+                return True
+            return False
+            
+    def get_cameras(self):
+        """Get a list of all registered cameras"""
+        with self.lock:
+            return {k: v for k, v in self.cameras.items()}
+
 class StreamServer:
     _instance = None
     _lock = threading.Lock()
@@ -37,6 +63,7 @@ class StreamServer:
                 cls._instance.plank_status = PlankStatus()
                 cls._instance.frame_size = (640, 480)  # Default frame size
                 cls._instance.clients = []  # List to store websocket connections
+                cls._instance.camera_registry = CameraRegistry()  # Add camera registry
                 
                 # Add rules configuration
                 cls._instance.rules = {
@@ -50,15 +77,22 @@ class StreamServer:
                 cls._instance.app.route('/video_feed/<camera_id>')(cls._instance.video_feed)
                 cls._instance.app.route('/api/status', methods=['GET'])(cls._instance.get_status)
                 cls._instance.app.route('/api/control_conveyor', methods=['POST'])(cls._instance.control_conveyor)
+                cls._instance.app.route('/api/cameras', methods=['GET'])(cls._instance.get_cameras)
+                cls._instance.app.route('/api/cameras', methods=['POST'])(cls._instance.register_camera)
+                cls._instance.app.route('/api/cameras/<camera_id>', methods=['DELETE'])(cls._instance.delete_camera)
                 
                 # Add websocket route
-                # cls._instance.app.route('/ws')(cls._instance.websocket_route)
                 cls._instance.app.route('/ws', websocket=True)(cls._instance.websocket_route)
 
             return cls._instance
 
     def __init__(self):
         # Skip initialization if already done
+        if hasattr(self, 'app'):
+            return
+            
+        # The initialization is already done in __new__
+        # No need to duplicate the route and rule definitions here
         pass
 
     def websocket_route(self):
@@ -113,6 +147,36 @@ class StreamServer:
             # Handle ping messages to keep connection alive
             elif event_type == 'ping':
                 pass  # Just acknowledge receipt, no action needed
+            # Add camera registration via websocket
+            elif event_type == 'register_camera':
+                camera_id = payload.get('id')
+                if camera_id and self.camera_registry.register_camera(camera_id, payload):
+                    # Also add to streaming system
+                    if 'frame_size' in payload:
+                        frame_size = tuple(payload['frame_size'])
+                    else:
+                        frame_size = self.frame_size
+                    self.add_camera(camera_id, frame_size)
+                    # Notify all clients about the new camera
+                    self.send_to_all_clients({
+                        'event': 'camera_added', 
+                        'data': {'id': camera_id, 'info': payload}
+                    })
+            # Add camera unregistration via websocket
+            elif event_type == 'unregister_camera':
+                camera_id = payload.get('id')
+                if camera_id and self.camera_registry.unregister_camera(camera_id):
+                    # Also remove from streaming system
+                    with self.frame_locks.get(camera_id, threading.Lock()):
+                        if camera_id in self.cameras:
+                            del self.cameras[camera_id]
+                        if camera_id in self.frame_locks:
+                            del self.frame_locks[camera_id]
+                    # Notify all clients about the removed camera
+                    self.send_to_all_clients({
+                        'event': 'camera_removed', 
+                        'data': {'id': camera_id}
+                    })
             # Add more event handlers as needed
             
         except json.JSONDecodeError:
@@ -323,11 +387,13 @@ class StreamServer:
 
     def index(self):
         """Render the template-based index page"""
-        # Pass camera IDs and frame size to the template
+        # Pass camera registry to the template
         camera_ids = list(self.cameras.keys())
+        registered_cameras = self.camera_registry.get_cameras()
         
         return render_template('index.html', 
                               camera_ids=camera_ids,
+                              cameras=registered_cameras,
                               frame_size=self.frame_size)
     
     def run(self, host='0.0.0.0', port=5000):
@@ -358,6 +424,46 @@ class StreamServer:
         server_thread.daemon = True
         server_thread.start()
         return server_thread
+
+    def get_cameras(self):
+        """API endpoint to get all registered cameras"""
+        return jsonify(self.camera_registry.get_cameras())
+        
+    def register_camera(self):
+        """API endpoint to register a new camera"""
+        data = request.json
+        if not data or 'id' not in data or 'url' not in data:
+            return jsonify({"error": "Missing required fields"}), 400
+            
+        camera_id = data['id']
+        
+        # Register with the camera registry
+        success = self.camera_registry.register_camera(camera_id, data)
+        if success:
+            # Also add to the streaming system if frame_size is provided
+            if 'frame_size' in data:
+                frame_size = tuple(data['frame_size'])
+            else:
+                frame_size = self.frame_size
+                
+            self.add_camera(camera_id, frame_size)
+            return jsonify({"message": f"Camera {camera_id} registered successfully"}), 201
+        else:
+            return jsonify({"error": "Failed to register camera"}), 500
+            
+    def delete_camera(self, camera_id):
+        """API endpoint to unregister a camera"""
+        success = self.camera_registry.unregister_camera(camera_id)
+        if success:
+            # Also remove from streaming system
+            with self.frame_locks.get(camera_id, threading.Lock()):
+                if camera_id in self.cameras:
+                    del self.cameras[camera_id]
+                if camera_id in self.frame_locks:
+                    del self.frame_locks[camera_id]
+            return jsonify({"message": f"Camera {camera_id} unregistered successfully"})
+        else:
+            return jsonify({"error": "Camera not found"}), 404
 
 # # Create a singleton instance
 # stream_server = StreamServer()
