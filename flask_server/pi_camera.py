@@ -16,8 +16,10 @@ target_height = 480
 custom_fps = 10 
 
 # ROI parameters
-ROI_start = 0.40
-ROI_end = 0.60
+ROI_width_start = 0.40
+ROI_width_end = 0.60
+ROI_height_start = 0.0  # Start from the top of the frame
+ROI_height_end = 1.0    # Use the full height by default
 
 
 # Initialize YOLO model
@@ -33,13 +35,16 @@ def main():
 
 
 
-    # Ensure ROI width is even
-    roi_width = int(target_width * (ROI_end - ROI_start))
+    # Ensure ROI dimensions are even
+    roi_width = int(target_width * (ROI_width_end - ROI_width_start))
+    roi_height = int(target_height * (ROI_height_end - ROI_height_start))
     if roi_width % 2 != 0:
         roi_width += 1  # Make it even
+    if roi_height % 2 != 0:
+        roi_height += 1  # Make it even
     
     print(f"Full dimensions: {target_width}x{target_height}")
-    print(f"ROI width: {roi_width}")
+    print(f"ROI dimensions: {roi_width}x{roi_height}")
     
     config = picam2.create_video_configuration(
         main={"size": (target_width, target_height), "format": "RGB888"},
@@ -57,7 +62,7 @@ def main():
         from server_websocket import StreamServer
         print("Starting stream server...")
         server = StreamServer()
-        server.add_camera('camera1', frame_size=(roi_width, target_height))
+        server.add_camera('camera1', frame_size=(roi_width, roi_height))
         server_thread = server.run_threaded()
         print("Stream server started successfully")
     except Exception as e:
@@ -67,7 +72,7 @@ def main():
     # Initialize video output
     try:
         from video_output_class import OutputVideo
-        out_cls = OutputVideo( fps=custom_fps, target_width=roi_width, target_height=target_height)
+        out_cls = OutputVideo( fps=custom_fps, target_width=roi_width, target_height=roi_height)
         out_cls.create_writer(name='camera1', subfolder='pi')
 
     except Exception as e:
@@ -90,11 +95,14 @@ def main():
             frame = picam2.capture_array()
             capture_end = time.time()
             
-            roi_x_start = int(target_width * ROI_start)
-            roi_x_end = int(target_width * ROI_end)
+            # Calculate ROI coordinates
+            roi_x_start = int(target_width * ROI_width_start)
+            roi_x_end = int(target_width * ROI_width_end)
+            roi_y_start = int(target_height * ROI_height_start)
+            roi_y_end = int(target_height * ROI_height_end)
             
-            # Extract ROI
-            cropped_frame = frame[:, roi_x_start:roi_x_end]
+            # Extract ROI with both width and height constraints
+            cropped_frame = frame[roi_y_start:roi_y_end, roi_x_start:roi_x_end]
             
             # Process frame
             process_start = time.time()
