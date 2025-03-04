@@ -18,8 +18,8 @@ custom_fps = 10
 # ROI parameters
 ROI_width_start = 0.40
 ROI_width_end = 0.60
-ROI_height_start = 0.30  
-ROI_height_end = 0.70    
+ROI_height_start = 0.0  
+ROI_height_end = 1.0   
 
 
 # Initialize YOLO model

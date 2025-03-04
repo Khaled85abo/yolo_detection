@@ -548,3 +548,17 @@ Speed: 2.7ms preprocess, 307.2ms inference, 0.5ms postprocess per image at shape
 
 Detected objects: 0
 Summary: 0 tracked objects, 0 in ROI
+
+0: 640x448 (no detections), 310.7ms
+Speed: 4.5ms preprocess, 310.7ms inference, 0.6ms postprocess per image at shape (1, 3, 640, 448)
+
+
+--- Frame 249 ---
+YOLO input shape: 128x96
+0: 480x640 (no detections), 336.5ms
+Speed: 4.5ms preprocess, 336.5ms inference, 0.6ms postprocess per image at shape (1, 3, 480, 640)
+Detected objects: 0
+[process_frame] Total: 0.342s | YOLO: 0.342s | Parse: 0.000s | Track: 0.000s | Orientation: 0.000s
+Updating status: [] [] []
+Summary: 0 tracked objects
+[main loop] Frame 249 total: 0.344s | capture: 0.001s | process_frame: 0.342s | draw: 0.000s | write: 0.000s
