@@ -16,13 +16,13 @@ class OutputVideo:
                 cls._instance._initialized = False
             return cls._instance
     
-    def __init__(self,  fps=10, target_width=640, target_height=480):
+    def __init__(self,  fps=10, frame_width=640, frame_height=480):
         with self._lock:
             # Skip initialization if already done
             if not self._initialized:
                 self.fps = fps
-                self.target_width = target_width
-                self.target_height = target_height
+                self.frame_width = frame_width
+                self.frame_height = frame_height
                 self.video_writers = {}
                 
                 # Create base directory if it doesn't exist
@@ -66,7 +66,7 @@ class OutputVideo:
                 output_path, 
                 fourcc, 
                 self.fps, 
-                (self.target_width, self.target_height)
+                (self.frame_width, self.frame_height)
             )
             
                 if writer.isOpened():
