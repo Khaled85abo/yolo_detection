@@ -11,15 +11,15 @@ from utilities.process_frame import process_frame
 from utilities.draw_boxes import draw_boxes_and_orientations
 from utilities.detect_stop import tracker
 #   
-target_width = 640
-target_height = 480
+frame_width = 640
+frame_height = 480
 custom_fps = 10 
 
 # ROI parameters
 ROI_width_start = 0.40
 ROI_width_end = 0.60
-ROI_height_start = 0.0  # Start from the top of the frame
-ROI_height_end = 1.0    # Use the full height by default
+ROI_height_start = 0.30  
+ROI_height_end = 0.70    
 
 
 # Initialize YOLO model
@@ -36,18 +36,18 @@ def main():
 
 
     # Ensure ROI dimensions are even
-    roi_width = int(target_width * (ROI_width_end - ROI_width_start))
-    roi_height = int(target_height * (ROI_height_end - ROI_height_start))
+    roi_width = int(frame_width * (ROI_width_end - ROI_width_start))
+    roi_height = int(frame_height * (ROI_height_end - ROI_height_start))
     if roi_width % 2 != 0:
         roi_width += 1  # Make it even
     if roi_height % 2 != 0:
         roi_height += 1  # Make it even
     
-    print(f"Full dimensions: {target_width}x{target_height}")
+    print(f"Full dimensions: {frame_width}x{frame_height}")
     print(f"ROI dimensions: {roi_width}x{roi_height}")
     
     config = picam2.create_video_configuration(
-        main={"size": (target_width, target_height), "format": "RGB888"},
+        main={"size": (frame_width, frame_height), "format": "RGB888"},
         controls={"FrameDurationLimits": (33333, 33333)}  # ~30fps
     )
     picam2.configure(config)
@@ -72,7 +72,7 @@ def main():
     # Initialize video output
     try:
         from video_output_class import OutputVideo
-        out_cls = OutputVideo( fps=custom_fps, target_width=roi_width, target_height=roi_height)
+        out_cls = OutputVideo( fps=custom_fps, frame_width=roi_width, frame_height=roi_height)
         out_cls.create_writer(name='camera1', subfolder='pi')
 
     except Exception as e:
@@ -96,10 +96,10 @@ def main():
             capture_end = time.time()
             
             # Calculate ROI coordinates
-            roi_x_start = int(target_width * ROI_width_start)
-            roi_x_end = int(target_width * ROI_width_end)
-            roi_y_start = int(target_height * ROI_height_start)
-            roi_y_end = int(target_height * ROI_height_end)
+            roi_x_start = int(frame_width * ROI_width_start)
+            roi_x_end = int(frame_width * ROI_width_end)
+            roi_y_start = int(frame_height * ROI_height_start)
+            roi_y_end = int(frame_height * ROI_height_end)
             
             # Extract ROI with both width and height constraints
             cropped_frame = frame[roi_y_start:roi_y_end, roi_x_start:roi_x_end]
