@@ -88,7 +88,8 @@ class StreamServer:
                 cls._instance.app.route('/api/cameras/<camera_id>', methods=['DELETE'])(cls._instance.delete_camera)
                 
                 # Add websocket route
-                cls._instance.app.route('/ws', websocket=True)(cls._instance.websocket_route)
+                # Fix the WebSocket route - remove websocket=True parameter
+                cls._instance.app.route('/ws')(cls._instance.websocket_route)
                 
                 # Load default cameras from configuration
                 for camera_id, camera_info in DEFAULT_CAMERAS.items():
