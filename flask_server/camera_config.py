@@ -7,7 +7,7 @@ CAMERAS = {
     "camera1": {
         "id": "camera1",
         "position": "front",
-        "url": "http://192.168.1.10:8000/stream",  # Pi camera streamed from python script
+        "url": "http://192.168.1.249:8000/stream",  # Pi camera streamed from python script
         "stream_type": "mjpeg",  # mjpeg, jpeg, or rtsp
         "roi": {
             "width_start": 0.40,
@@ -38,7 +38,7 @@ CAMERAS = {
     "camera2": {
         "id": "camera2",
         "position": "side",
-        "url": "http://192.168.1.100/stream",  # ESP32-CAM stream
+        "url": "http://192.168.1.195/stream",  # ESP32-CAM stream
         "stream_type": "jpeg",  # ESP32-CAM often uses single JPEG images
         "roi": {
             "width_start": 0.3,
