@@ -162,6 +162,11 @@ def main():
     from server_websocket import StreamServer
     server = StreamServer()
     
+    # Start the server in a separate thread
+    server_thread = server.run_threaded(host='0.0.0.0', port=5000)
+    print(f"Server started on http://0.0.0.0:5000")
+    time.sleep(2)  # Give the server time to start
+    
     # Get registered cameras from the server
     camera_registry = server.camera_registry.get_cameras()
     if not camera_registry:
@@ -275,6 +280,11 @@ def main():
                 # Skip if frame is None or empty
                 if frame is None or frame.size == 0:
                     print(f"No frame from camera {camera_id}, skipping")
+                    continue
+                
+                # Check if frame is just a blank/black frame (common when connection fails)
+                if np.mean(frame) < 5.0:  # Very dark frame is likely blank
+                    print(f"Camera {camera_id} returned blank frame, skipping")
                     continue
                 
                 # Calculate ROI coordinates
