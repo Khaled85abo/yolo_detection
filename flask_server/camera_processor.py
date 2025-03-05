@@ -219,7 +219,7 @@ def main():
         out_cls = {}
         for camera_id, camera_data in camera_objects.items():
             config = camera_data["config"]
-            recording_config = config.get("recording", {"enabled": True, "format": "mp4", "quality": "medium"})
+            recording_config = config.get("recording", {"enabled": True, "format": "mp4", "quality": "medium", "fps": 10})
             
             if not recording_config.get("enabled", True):
                 print(f"Recording disabled for camera {camera_id}")
@@ -234,8 +234,9 @@ def main():
             else:  # low
                 bitrate = 500000   # 500 Kbps
                 
+            # Use the fps from the config file
             out = OutputVideo(
-                fps=config.get("fps", 30), 
+                fps=recording_config.get("fps", 10), 
                 frame_width=config["roi_width"], 
                 frame_height=config["roi_height"],
                 bitrate=bitrate
@@ -298,9 +299,8 @@ def main():
                     model, 
                     tracker, 
                     server,
-                    conf_threshold=conf_threshold,
-                    iou_threshold=iou_threshold,
-
+                    # conf_threshold=conf_threshold,
+                    # iou_threshold=iou_threshold,
                 )
                 process_end = time.time()
                 

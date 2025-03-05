@@ -24,6 +24,7 @@ CAMERAS = {
             "max_objects": 10
         },
         "recording": {
+            "fps": 10,
             "enabled": True,
             "format": "mp4",
             "quality": "medium"  # low, medium, high
@@ -54,6 +55,7 @@ CAMERAS = {
             "max_objects": 10
         },
         "recording": {
+            "fps": 10,
             "enabled": True,
             "format": "mp4",
             "quality": "low"  # Lower quality for this camera

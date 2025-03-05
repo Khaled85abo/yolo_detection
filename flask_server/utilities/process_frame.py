@@ -2,7 +2,7 @@ import time
 import numpy as np
 from collections import defaultdict
 from utilities.detect_stop import stop_detection_memory, STOP_THRESHOLD_FRAMES, MOVEMENT_THRESHOLD
-from utilities.detect_overlap import _check_overlap_from_boxes
+from utilities.detect_overlap import check_overlap_from_boxes
 from utilities.get_orientation import get_plank_orientation
 
 
@@ -116,7 +116,7 @@ def process_frame(frame, model, tracker, server):
         for j, track2 in enumerate(tracked_objects[i+1:], i+1):
             ltrb2 = track2.to_ltrb()
             
-            is_overlapped, percent1, percent2 = _check_overlap_from_boxes(ltrb1, ltrb2)
+            is_overlapped, percent1, percent2 = check_overlap_from_boxes(ltrb1, ltrb2)
             if is_overlapped:
                 overlapped_pairs.append((track1.track_id, track2.track_id))
                 print(f"Warning: Overlap detected between planks {track1.track_id} and {track2.track_id}")
