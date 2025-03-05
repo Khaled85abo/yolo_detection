@@ -8,6 +8,12 @@ import os
 from flask import Blueprint, current_app
 from simple_websocket import Server as WebSocketServer, ConnectionClosed
 
+# Import camera configuration
+try:
+    from camera_config import CAMERAS as DEFAULT_CAMERAS
+except ImportError:
+    DEFAULT_CAMERAS = {}
+
 class PlankStatus:
     def __init__(self):
         self.overlap: List[tuple] = []
@@ -83,6 +89,12 @@ class StreamServer:
                 
                 # Add websocket route
                 cls._instance.app.route('/ws', websocket=True)(cls._instance.websocket_route)
+                
+                # Load default cameras from configuration
+                for camera_id, camera_info in DEFAULT_CAMERAS.items():
+                    cls._instance.camera_registry.register_camera(camera_id, camera_info)
+                    frame_size = camera_info.get('frame_size', cls._instance.frame_size)
+                    cls._instance.add_camera(camera_id, frame_size)
 
             return cls._instance
 
