@@ -53,8 +53,6 @@ class PiCameraStream:
         while self.running:
             try:
                 frame = self.picam.capture_array()
-                # Convert from RGB to BGR for OpenCV compatibility
-                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
                 with self.lock:
                     self.frame = frame
             except Exception as e:
