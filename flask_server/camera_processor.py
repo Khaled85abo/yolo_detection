@@ -146,8 +146,7 @@ class CameraStream:
                 
     def capture_array(self):
         if self.frame is None:
-            # Return a blank frame if no frame is available
-            return np.zeros((*self.frame_size[::-1], 3), dtype=np.uint8)
+            return None
         
         # Resize frame if needed
         if self.frame.shape[1] != self.frame_size[0] or self.frame.shape[0] != self.frame_size[1]:
@@ -189,7 +188,7 @@ def main():
             while time.time() - validation_start < validation_timeout:
                 time.sleep(0.4)
                 test_frame = camera_obj.capture_array()
-                if test_frame is not None and test_frame.size > 0:
+                if test_frame is not None:
                     this_camera_active = True
                     print(f"Camera {camera_id} is active")
                     break
