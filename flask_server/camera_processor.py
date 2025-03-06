@@ -156,7 +156,7 @@ class CameraStream:
 
 def main():
     print("Initializing camera processing client...")
-    
+    active_cameras = 0
     # Import StreamServer to get camera registry and update frames
     from server_websocket import StreamServer
     server = StreamServer()
@@ -190,6 +190,7 @@ def main():
                 test_frame = camera_obj.capture_array()
                 if test_frame is not None:
                     this_camera_active = True
+                    active_cameras += 1
                     print(f"Camera {camera_id} is active")
                     break
                 else:
@@ -270,7 +271,7 @@ def main():
     # Main processing loop
     try:
         frame_count = 0
-        while True:
+        while True and active_cameras > 0:
             frame_count += 1
             print(f"\n--- Frame {frame_count} ---")
             
