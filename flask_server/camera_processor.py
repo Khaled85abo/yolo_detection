@@ -179,9 +179,22 @@ def main():
     camera_objects = {}
     for camera_id, camera_info in camera_registry.items():
         # Initialize camera stream
+        this_camera_active = False
         try:
             camera_obj = CameraStream(camera_info)
             print(f"Initialized camera stream: {camera_id} at {camera_info['url']}")
+            camera_obj.start()
+            validation_timeout = 3
+            validation_start= time.time()
+            while time.time() - validation_start < validation_timeout:
+                time.sleep(0.4)
+                test_frame = camera_obj.capture_array()
+                if test_frame is not None and test_frame.size > 0:
+                    this_camera_active = True
+                    print(f"Camera {camera_id} is active")
+                    break
+                else:
+                    print(f"Camera {camera_id} is not active")
         except Exception as e:
             print(f"Failed to initialize camera {camera_id}: {e}")
             continue
@@ -211,8 +224,11 @@ def main():
         # Store camera with its configuration
         camera_info["roi_width"] = roi_width
         camera_info["roi_height"] = roi_height
-        camera_objects[camera_id] = {"camera": camera_obj, "config": camera_info}
-    
+        if this_camera_active:
+            camera_objects[camera_id] = {"camera": camera_obj, "config": camera_info}
+        else:
+            print(f"Camera {camera_id} failed validation - stopping camera")
+            camera_obj.stop()
     # Start all cameras
     for camera_id, camera_data in camera_objects.items():
         print(f"Starting camera {camera_id}...")
