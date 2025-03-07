@@ -236,7 +236,7 @@ def main():
     
     # Initialize video outputs
     try:
-        from video_output_class import OutputVideo
+        from video_saving_class import OutputVideo
         out_cls = {}
         for camera_id, camera_data in camera_objects.items():
             config = camera_data["config"]
