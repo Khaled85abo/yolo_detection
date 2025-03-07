@@ -57,31 +57,105 @@ class CameraStream:
             self._update_mjpeg_stream()
     
     def _update_mjpeg_stream(self):
-        cap = cv2.VideoCapture(self.url)
-        
-        # Set buffer size based on FPS to avoid lag
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        
-        while self.running:
-            success, frame = cap.read()
-            if success:
-                self.frame = frame
-                self.retry_count = 0
-                # Control frame rate
-                time.sleep(1.0 / self.fps)
-            else:
-                print(f"Failed to read from MJPEG stream: {self.url}")
-                self.retry_count += 1
-                if self.retry_count > self.connection_config['max_retries']:
-                    print(f"Max retries exceeded for {self.url}, reconnecting...")
-                    cap.release()
-                    time.sleep(self.connection_config['retry_interval'])
-                    cap = cv2.VideoCapture(self.url)
+        try:
+            print(f"Connecting to MJPEG stream at {self.url}")
+            
+            # Add custom headers that some cameras might require
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            # Try using OpenCV's VideoCapture first
+            cap = cv2.VideoCapture(self.url)
+            
+            # Set buffer size based on FPS to avoid lag
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            
+            # Check if OpenCV connection was successful
+            if not cap.isOpened():
+                print(f"OpenCV failed to open {self.url}, trying requests library...")
+                cap.release()
+                
+                # If OpenCV fails, try using requests library for more control
+                while self.running:
+                    try:
+                        response = requests.get(
+                            self.url, 
+                            stream=True, 
+                            timeout=self.connection_config['timeout'],
+                            headers=headers
+                        )
+                        
+                        if response.status_code != 200:
+                            print(f"Failed to connect to {self.url}, status: {response.status_code}")
+                            time.sleep(self.connection_config['retry_interval'])
+                            continue
+                            
+                        # Parse multipart/x-mixed-replace stream
+                        bytes_data = bytes()
+                        for chunk in response.iter_content(chunk_size=1024):
+                            bytes_data += chunk
+                            a = bytes_data.find(b'\xff\xd8')  # JPEG start
+                            b = bytes_data.find(b'\xff\xd9')  # JPEG end
+                            
+                            if a != -1 and b != -1:
+                                jpg = bytes_data[a:b+2]
+                                bytes_data = bytes_data[b+2:]
+                                
+                                # Decode the JPEG image
+                                frame = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
+                                
+                                if frame is not None and frame.size > 0:
+                                    # Resize frame if needed
+                                    if frame.shape[1] != self.frame_size[0] or frame.shape[0] != self.frame_size[1]:
+                                        frame = cv2.resize(frame, self.frame_size)
+                                    self.frame = frame
+                                    self.retry_count = 0
+                                    
+                                # Control frame rate
+                                time.sleep(1.0 / self.fps)
+                                
+                    except Exception as e:
+                        print(f"Error in MJPEG stream for {self.url}: {e}")
+                        self.retry_count += 1
+                        
+                        if self.retry_count > self.connection_config['max_retries']:
+                            print(f"Max retries exceeded for {self.url}, waiting longer...")
+                            time.sleep(self.connection_config['retry_interval'] * 2)
+                            self.retry_count = 0
+                        else:
+                            time.sleep(self.connection_config['retry_interval'])
+                return
+            
+            # If OpenCV connection was successful, use it
+            while self.running:
+                success, frame = cap.read()
+                if success:
+                    # Resize frame if needed
+                    if frame.shape[1] != self.frame_size[0] or frame.shape[0] != self.frame_size[1]:
+                        frame = cv2.resize(frame, self.frame_size)
+                    self.frame = frame
                     self.retry_count = 0
+                    # Control frame rate
+                    time.sleep(1.0 / self.fps)
                 else:
-                    time.sleep(self.connection_config['retry_interval'])
-        
-        cap.release()
+                    print(f"Failed to read from MJPEG stream: {self.url}")
+                    self.retry_count += 1
+                    if self.retry_count > self.connection_config['max_retries']:
+                        print(f"Max retries exceeded for {self.url}, reconnecting...")
+                        cap.release()
+                        time.sleep(self.connection_config['retry_interval'])
+                        cap = cv2.VideoCapture(self.url)
+                        self.retry_count = 0
+                    else:
+                        time.sleep(self.connection_config['retry_interval'])
+            
+            cap.release()
+            
+        except Exception as e:
+            print(f"Exception in MJPEG stream handler for {self.url}: {e}")
+            import traceback
+            traceback.print_exc()
     
     def _update_jpeg_stream(self):
         while self.running:

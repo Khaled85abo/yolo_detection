@@ -271,7 +271,7 @@ class StreamServer:
     def add_camera(self, camera_id, frame_size=(640, 480)):
         """Add a new camera feed"""
         self.cameras[camera_id] = None
-        self.cameras_frames[camera_id] = None
+        self.cameras_frames[camera_id] = frame_size
         self.frame_locks[camera_id] = threading.Lock()
 
     def update_frame(self, camera_id, frame):

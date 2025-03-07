@@ -39,7 +39,7 @@ CAMERAS = {
         "id": "camera2",
         "position": "side",
         "url": "http://192.168.1.195/stream",  # ESP32-CAM stream
-        "stream_type": "jpeg",  # ESP32-CAM often uses single JPEG images
+        "stream_type": "mjpeg",  # Changed from "jpeg" to "mjpeg" based on curl output
         "roi": {
             "width_start": 0.3,
             "width_end": 0.7,
@@ -47,10 +47,10 @@ CAMERAS = {
             "height_end": 1.0
         },
         "frame_size": (640, 480),
-        "fps": 10,  # ESP32-CAM might have lower FPS
+        "fps": 10,
         "processing": {
             "enabled": True,
-            "confidence_threshold": 0.4,  # Lower threshold for this camera
+            "confidence_threshold": 0.4,
             "iou_threshold": 0.45,
             "max_objects": 10
         },
@@ -58,10 +58,10 @@ CAMERAS = {
             "fps": 10,
             "enabled": True,
             "format": "mp4",
-            "quality": "low"  # Lower quality for this camera
+            "quality": "low"
         },
         "connection": {
-            "timeout": 10,  # Longer timeout for potentially slower device
+            "timeout": 10,
             "retry_interval": 2,
             "max_retries": 5
         }
