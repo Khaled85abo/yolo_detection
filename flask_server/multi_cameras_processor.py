@@ -159,6 +159,7 @@ def main():
     active_cameras = 0
     # Import StreamServer to get camera registry and update frames
     from server_websocket import StreamServer
+    from utilities.get_roi_frame import get_roi_frame
     server = StreamServer()
     
     # Start the server in a separate thread
@@ -208,22 +209,16 @@ def main():
         })
         
         frame_width, frame_height = camera_info.get('frame_size', (640, 480))
-        roi_width = int(frame_width * (roi["width_end"] - roi["width_start"]))
-        roi_height = int(frame_height * (roi["height_end"] - roi["height_start"]))
-        if roi_width % 2 != 0:
-            roi_width += 1  # Make it even
-        if roi_height % 2 != 0:
-            roi_height += 1  # Make it even
+        
+        roi_frame_width, roi_frame_height = get_roi_frame(frame_width, frame_height, roi)
             
         print(f"Camera {camera_id}:")
-        print(f"  Full dimensions: {frame_width}x{frame_height}")
-        print(f"  ROI dimensions: {roi_width}x{roi_height}")
         print(f"  Stream type: {camera_info.get('stream_type', 'mjpeg')}")
         print(f"  Target FPS: {camera_info.get('fps', 30)}")
         
         # Store camera with its configuration
-        camera_info["roi_width"] = roi_width
-        camera_info["roi_height"] = roi_height
+        camera_info["roi_frame_width"] = roi_frame_width
+        camera_info["roi_frame_height"] = roi_frame_height
         if this_camera_active:
             camera_objects[camera_id] = {"camera": camera_obj, "config": camera_info}
         else:
@@ -258,8 +253,8 @@ def main():
             # Use the fps from the config file
             out = OutputVideo(
                 fps=recording_config.get("fps", 10), 
-                frame_width=config["roi_width"], 
-                frame_height=config["roi_height"],
+                frame_width=config["roi_frame_width"], 
+                frame_height=config["roi_frame_height"],
                 bitrate=bitrate
             )
             out.create_writer(name=camera_id, subfolder='pi')

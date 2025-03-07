@@ -7,11 +7,12 @@ from typing import Dict, List
 import os
 from flask import Blueprint, current_app
 from simple_websocket import Server as WebSocketServer, ConnectionClosed
-
+from utilities.get_roi_frame import get_roi_frame
 # Import camera configuration
 try:
     from camera_config import CAMERAS as DEFAULT_CAMERAS
 except ImportError:
+    print("camera_config.py not found - using empty configuration")
     DEFAULT_CAMERAS = {}
 
 class PlankStatus:
@@ -94,7 +95,8 @@ class StreamServer:
                 for camera_id, camera_info in DEFAULT_CAMERAS.items():
                     cls._instance.camera_registry.register_camera(camera_id, camera_info)
                     frame_size = camera_info.get('frame_size', cls._instance.frame_size)
-                    cls._instance.add_camera(camera_id, frame_size)
+                    roi_width, roi_height = get_roi_frame(frame_size[0], frame_size[1], camera_info.get('roi', {}))
+                    cls._instance.add_camera(camera_id, frame_size=(roi_width, roi_height))
 
             return cls._instance
 
@@ -168,7 +170,8 @@ class StreamServer:
                         frame_size = tuple(payload['frame_size'])
                     else:
                         frame_size = self.frame_size
-                    self.add_camera(camera_id, frame_size)
+                    roi_width, roi_height = get_roi_frame(frame_size[0], frame_size[1], payload.get('roi', {}))
+                    self.add_camera(camera_id, frame_size=(roi_width, roi_height))
                     # Notify all clients about the new camera
                     self.send_to_all_clients({
                         'event': 'camera_added', 
