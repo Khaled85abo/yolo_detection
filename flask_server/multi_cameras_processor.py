@@ -301,6 +301,17 @@ def main():
         else:
             print(f"Camera {camera_id} failed validation - stopping camera")
             camera_obj.stop()
+            
+            # IMPORTANT FIX: Unregister inactive cameras from the server
+            server.camera_registry.unregister_camera(camera_id)
+            
+            # Also remove from server's streaming system
+            if camera_id in server.cameras:
+                with server.frame_locks.get(camera_id, threading.Lock()):
+                    if camera_id in server.cameras:
+                        del server.cameras[camera_id]
+                    if camera_id in server.frame_locks:
+                        del server.frame_locks[camera_id]
     # Start all cameras
     for camera_id, camera_data in camera_objects.items():
         print(f"Starting camera {camera_id}...")
