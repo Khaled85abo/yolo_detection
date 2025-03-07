@@ -66,6 +66,7 @@ class StreamServer:
                                         static_folder=static_dir)
                 
                 cls._instance.cameras = {}
+                cls._instance.cameras_frames = {}
                 cls._instance.frame_locks = {}
                 cls._instance.plank_status = PlankStatus()
                 cls._instance.frame_size = (640, 480)  # Default frame size
@@ -95,8 +96,8 @@ class StreamServer:
                 for camera_id, camera_info in DEFAULT_CAMERAS.items():
                     cls._instance.camera_registry.register_camera(camera_id, camera_info)
                     frame_size = camera_info.get('frame_size', cls._instance.frame_size)
-                    roi_width, roi_height = get_roi_frame(frame_size[0], frame_size[1], camera_info.get('roi', {}))
-                    cls._instance.add_camera(camera_id, frame_size=(roi_width, roi_height))
+                    roi_frame_width, roi_frame_height = get_roi_frame(frame_size[0], frame_size[1], camera_info.get('roi', {}))
+                    cls._instance.add_camera(camera_id, frame_size=(roi_frame_width, roi_frame_height))
 
             return cls._instance
 
@@ -170,8 +171,8 @@ class StreamServer:
                         frame_size = tuple(payload['frame_size'])
                     else:
                         frame_size = self.frame_size
-                    roi_width, roi_height = get_roi_frame(frame_size[0], frame_size[1], payload.get('roi', {}))
-                    self.add_camera(camera_id, frame_size=(roi_width, roi_height))
+                    roi_frame_width, roi_frame_height = get_roi_frame(frame_size[0], frame_size[1], payload.get('roi', {}))
+                    self.add_camera(camera_id, frame_size=(roi_frame_width, roi_frame_height))
                     # Notify all clients about the new camera
                     self.send_to_all_clients({
                         'event': 'camera_added', 
@@ -270,8 +271,8 @@ class StreamServer:
     def add_camera(self, camera_id, frame_size=(640, 480)):
         """Add a new camera feed"""
         self.cameras[camera_id] = None
+        self.cameras_frames[camera_id] = None
         self.frame_locks[camera_id] = threading.Lock()
-        self.frame_size = frame_size
 
     def update_frame(self, camera_id, frame):
         """Update the frame for a specific camera"""
@@ -406,9 +407,12 @@ class StreamServer:
         camera_ids = list(self.cameras.keys())
         registered_cameras = self.camera_registry.get_cameras()
         
+        # Create a dictionary of frame sizes for each camera
+        
         return render_template('index.html', 
                               camera_ids=camera_ids,
                               cameras=registered_cameras,
+                              camera_frame_sizes=self.cameras_frames,
                               frame_size=self.frame_size)
     
     def run(self, host='0.0.0.0', port=5000):
