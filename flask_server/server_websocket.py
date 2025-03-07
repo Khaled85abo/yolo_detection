@@ -66,7 +66,7 @@ class StreamServer:
                                         static_folder=static_dir)
                 
                 cls._instance.cameras = {}
-                cls._instance.cameras_frames = {}
+                cls._instance.camera_frame_sizes = {}
                 cls._instance.frame_locks = {}
                 cls._instance.plank_status = PlankStatus()
                 cls._instance.frame_size = (640, 480)  # Default frame size
@@ -271,14 +271,14 @@ class StreamServer:
     def add_camera(self, camera_id, frame_size=(640, 480)):
         """Add a new camera feed"""
         self.cameras[camera_id] = None
-        self.cameras_frames[camera_id] = frame_size
+        self.camera_frame_sizes[camera_id] = frame_size
         self.frame_locks[camera_id] = threading.Lock()
 
     def update_frame(self, camera_id, frame):
         """Update the frame for a specific camera"""
         with self.frame_locks[camera_id]:
             # Resize frame for streaming to reduce bandwidth
-            stream_frame = cv2.resize(frame, self.frame_size)
+            stream_frame = cv2.resize(frame, self.camera_frame_sizes[camera_id])
             self.cameras[camera_id] = stream_frame.copy()
     
     def generate_frames(self, camera_id):
@@ -412,7 +412,7 @@ class StreamServer:
         return render_template('index.html', 
                               camera_ids=camera_ids,
                               cameras=registered_cameras,
-                              camera_frame_sizes=self.cameras_frames,
+                              camera_frame_sizes=self.camera_frame_sizes,
                               frame_size=self.frame_size)
     
     def run(self, host='0.0.0.0', port=5000):

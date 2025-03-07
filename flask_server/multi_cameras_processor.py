@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 
 from utilities.process_frame import process_frame
 from utilities.draw_boxes import draw_boxes_and_orientations
-from utilities.detect_stop import tracker
+from utilities.detect_stop import create_tracker, STOP_THRESHOLD_FRAMES, MOVEMENT_THRESHOLD, stop_detection_memory
 
 # Default frame dimensions
 frame_width = 640
@@ -251,6 +251,7 @@ def main():
     
     # Initialize camera objects
     camera_objects = {}
+    camera_trackers = {}  # Dictionary to store trackers for each camera
     for camera_id, camera_info in camera_registry.items():
         # Initialize camera stream
         this_camera_active = False
@@ -294,6 +295,8 @@ def main():
         camera_info["roi_frame_width"] = roi_frame_width
         camera_info["roi_frame_height"] = roi_frame_height
         if this_camera_active:
+            # Create a new tracker for this camera
+            camera_trackers[camera_id] = create_tracker()
             camera_objects[camera_id] = {"camera": camera_obj, "config": camera_info}
         else:
             print(f"Camera {camera_id} failed validation - stopping camera")
@@ -392,10 +395,8 @@ def main():
                 tracked_objects, orientations, roi_bounds = process_frame(
                     cropped_frame, 
                     model, 
-                    tracker, 
-                    server,
-                    # conf_threshold=conf_threshold,
-                    # iou_threshold=iou_threshold,
+                    camera_trackers[camera_id],  # Use the camera-specific tracker
+                    server
                 )
                 process_end = time.time()
                 
