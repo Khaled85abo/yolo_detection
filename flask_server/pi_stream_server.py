@@ -9,7 +9,7 @@ import numpy as np
 app = Flask(__name__)
 
 class PiCameraStream:
-    def __init__(self, camera_num=0, width=640, height=480, fps=30):
+    def __init__(self, camera_num=0, width=640, height=480, fps=10):
         self.camera_num = camera_num
         self.width = width
         self.height = height
@@ -117,9 +117,9 @@ if __name__ == '__main__':
     # Initialize camera
     camera = PiCameraStream(
         camera_num=args.camera,
-        width=args.width,
-        height=args.height,
-        fps=args.fps
+        # width=args.width,
+        # height=args.height,
+        # fps=args.fps
     )
     camera.start()
     
