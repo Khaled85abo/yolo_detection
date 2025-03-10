@@ -112,8 +112,6 @@ class CameraStream:
                                     self.frame = frame
                                     self.retry_count = 0
                                     
-                                # Control frame rate
-                                time.sleep(1.0 / self.fps)
                                 
                     except Exception as e:
                         print(f"Error in MJPEG stream for {self.url}: {e}")
@@ -136,8 +134,7 @@ class CameraStream:
                         frame = cv2.resize(frame, self.frame_size)
                     self.frame = frame
                     self.retry_count = 0
-                    # Control frame rate
-                    time.sleep(1.0 / self.fps)
+
                 else:
                     print(f"Failed to read from MJPEG stream: {self.url}")
                     self.retry_count += 1
@@ -189,8 +186,6 @@ class CameraStream:
                 time.sleep(self.connection_config['retry_interval'] * 2)
                 self.retry_count = 0
             
-            # Control frame rate
-            time.sleep(1.0 / self.fps)
     
     def _update_rtsp_stream(self):
         # RTSP handling is similar to MJPEG but might need different settings
@@ -445,9 +440,9 @@ def main():
             
             # Control overall processing rate
             elapsed = loop_end - loop_start
-            target_time = 1.0 / custom_fps
-            if elapsed < target_time:
-                time.sleep(target_time - elapsed)
+            # target_time = 1.0 / custom_fps
+            # if elapsed < target_time:
+            #     time.sleep(target_time - elapsed)
 
     except KeyboardInterrupt:
         print("\nStopping capture...")
