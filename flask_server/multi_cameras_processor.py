@@ -438,11 +438,6 @@ def main():
             loop_end = time.time()
             print(f"Total frame processing time: {(loop_end - loop_start):.3f}s")
             
-            # Control overall processing rate
-            elapsed = loop_end - loop_start
-            # target_time = 1.0 / custom_fps
-            # if elapsed < target_time:
-            #     time.sleep(target_time - elapsed)
 
     except KeyboardInterrupt:
         print("\nStopping capture...")
