@@ -64,14 +64,6 @@
 <body>
     <h1>Plank Detection System</h1>
 
-    <!-- Camera Feeds -->
-    {% for camera_id in camera_ids %}
-    <div class="camera-feed">
-        <h2>Camera {{ camera_id }}</h2>
-        <img src="/video_feed/{{ camera_id }}" width="{{ camera_frame_sizes[camera_id][0] }}"
-            height="{{ camera_frame_sizes[camera_id][1] }}" />
-    </div>
-    {% endfor %}
 
     <div class="status" id="status">
         Loading status...
@@ -81,6 +73,16 @@
         <button onclick="controlConveyor(true)" style="background-color: #ff4444;">Stop Conveyor</button>
         <button onclick="controlConveyor(false)" style="background-color: #44ff44;">Start Conveyor</button>
     </div>
+    <!-- Camera Feeds -->
+    {% for camera_id in camera_ids %}
+    <div class="camera-feed">
+        <h2>Camera {{ camera_id }}</h2>
+        <img src="/video_feed/{{ camera_id }}" width="{{ camera_frame_sizes[camera_id][0] }}"
+            height="{{ camera_frame_sizes[camera_id][1] }}" />
+    </div>
+    {% endfor %}
+
+
 
     <!-- Rule Configuration Section -->
     <div class="rule-configuration">
