@@ -27,6 +27,43 @@
             margin-bottom: 20px;
         }
 
+        /* Enhanced camera feed styling */
+        .camera-feeds-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+
+        .camera-feed {
+            margin-bottom: 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            background-color: #f9f9f9;
+            transition: transform 0.2s;
+        }
+
+        .camera-feed:hover {
+            transform: scale(1.02);
+        }
+
+        .camera-feed h2 {
+            margin: 0;
+            padding: 10px 15px;
+            background-color: #4488ff;
+            color: white;
+            font-size: 1.2rem;
+        }
+
+        .camera-feed img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+        }
+
         /* New styles for rule configuration */
         .rule-configuration {
             margin: 20px;
