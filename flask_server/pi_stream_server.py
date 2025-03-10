@@ -9,7 +9,7 @@ import numpy as np
 app = Flask(__name__)
 
 class PiCameraStream:
-    def __init__(self, camera_num=0, width=640, height=480, fps=10):
+    def __init__(self, camera_num=0, width=640, height=480, fps=30):
         self.camera_num = camera_num
         self.width = width
         self.height = height
@@ -27,9 +27,11 @@ class PiCameraStream:
         self.running = True
         self.picam = Picamera2(camera_num=self.camera_num)
         
+        # Configure camera with frame rate limits
+        # For maximum speed, set a very high frame rate limit
         config = self.picam.create_video_configuration(
             main={"size": (self.width, self.height), "format": "RGB888"},
-            controls={"FrameDurationLimits": (int(1000000/self.fps), int(1000000/self.fps))}
+            controls={"FrameRate": self.fps}
         )
         self.picam.configure(config)
         self.picam.set_controls({"AeEnable": True})
@@ -57,8 +59,7 @@ class PiCameraStream:
                     self.frame = frame
             except Exception as e:
                 print(f"Error capturing frame: {e}")
-            # Sleep to maintain frame rate
-            time.sleep(1.0 / self.fps)
+            # No sleep needed - camera hardware handles timing
             
     def get_frame(self):
         with self.lock:
@@ -82,9 +83,7 @@ def generate_frames():
         # Yield frame in MJPEG format
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
-        
-        # Control frame rate
-        time.sleep(0.03)  # ~30fps
+        # No sleep needed - we want to stream as fast as frames are available
 
 @app.route('/')
 def index():
@@ -111,15 +110,18 @@ if __name__ == '__main__':
     parser.add_argument('--camera', type=int, default=0, help='Camera number to use')
     parser.add_argument('--width', type=int, default=640, help='Frame width')
     parser.add_argument('--height', type=int, default=480, help='Frame height')
-    parser.add_argument('--fps', type=int, default=30, help='Target FPS')
+    parser.add_argument('--fps', type=int, default=0, help='Target FPS (0 for maximum)')
     args = parser.parse_args()
+    
+    # For maximum speed, use fps=0 or a very high number
+    fps = args.fps if args.fps > 0 else 120  # Use 120 as a high default when 0 is specified
     
     # Initialize camera
     camera = PiCameraStream(
         camera_num=args.camera,
-        # width=args.width,
-        # height=args.height,
-        # fps=args.fps
+        width=args.width,
+        height=args.height,
+        fps=fps
     )
     camera.start()
     
