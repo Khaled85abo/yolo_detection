@@ -111,13 +111,15 @@
         <button onclick="controlConveyor(false)" style="background-color: #44ff44;">Start Conveyor</button>
     </div>
     <!-- Camera Feeds -->
-    {% for camera_id in camera_ids %}
-    <div class="camera-feed">
-        <h2>Camera {{ camera_id }}</h2>
-        <img src="/video_feed/{{ camera_id }}" width="{{ camera_frame_sizes[camera_id][0] }}"
-            height="{{ camera_frame_sizes[camera_id][1] }}" />
+    <div class="camera-feeds-container">
+        {% for camera_id in camera_ids %}
+        <div class="camera-feed">
+            <h2>Camera {{ camera_id }}</h2>
+            <img src="/video_feed/{{ camera_id }}" width="{{ camera_frame_sizes[camera_id][0] }}"
+                height="{{ camera_frame_sizes[camera_id][1] }}" />
+        </div>
+        {% endfor %}
     </div>
-    {% endfor %}
 
 
 
