@@ -262,7 +262,7 @@ def main():
             validation_timeout = 3
             validation_start= time.time()
             while time.time() - validation_start < validation_timeout:
-                time.sleep(0.4)
+                time.sleep(0.2)
                 test_frame = camera_obj.capture_array()
                 if test_frame is not None:
                     this_camera_active = True
