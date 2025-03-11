@@ -33,6 +33,11 @@ def main():
     tracker = create_tracker()
 
     print("Configuring camera settings...")
+
+    # Unregister any existing cameras for the server websocket to work
+    server.camera_registry.unregister_camera('camera1')
+    server.camera_registry.unregister_camera('camera2')
+
     
 
 
