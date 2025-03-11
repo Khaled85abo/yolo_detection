@@ -145,7 +145,7 @@ def main():
     parser.add_argument('--camera', type=int, default=0, help='Camera index to use (if multiple connected)')
     parser.add_argument('--width', type=int, default=640, help='Frame capture width')
     parser.add_argument('--height', type=int, default=480, help='Frame capture height')
-    parser.add_argument('--fps', type=int, default=20, help='Target FPS (0 for maximum camera speed)')
+    parser.add_argument('--fps', type=int, default=10, help='Target FPS (0 for maximum camera speed)')
     parser.add_argument('--quality', type=int, default=80, help='JPEG quality (0-100, higher=better)')
     args = parser.parse_args()
 

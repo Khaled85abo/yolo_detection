@@ -59,20 +59,20 @@ def main():
                         camera_obj = CameraStream(camera_info)
                         print(f"Initialized camera stream: {camera_id} at {camera_info['url']}")
                         camera_obj.start()
-                        validation_timeout = 3
+                        validation_timeout = 5
                         validation_start = time.time()
                         camera_active = False
                         
                         while time.time() - validation_start < validation_timeout:
-                            time.sleep(0.2)
+                            time.sleep(0.5)
                             test_frame = camera_obj.capture_array()
-                            if test_frame is not None:
+                            if test_frame is not None and test_frame.size > 0 and np.mean(test_frame) > 5.0:
                                 camera_active = True
                                 active_cameras += 1
                                 print(f"Camera {camera_id} is active")
                                 break
                             else:
-                                print(f"Camera {camera_id} is not active")
+                                print(f"Waiting for camera {camera_id} to become active...")
                         
                         if camera_active:
                             # Calculate ROI dimensions
