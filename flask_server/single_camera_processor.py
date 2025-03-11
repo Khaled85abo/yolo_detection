@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 
 from utilities.process_frame import process_frame
 from utilities.draw_boxes import draw_boxes_and_orientations
-from utilities.detect_stop import tracker
+from utilities.detect_stop import create_tracker
 
 # Default frame dimensions
 frame_width = 640
@@ -77,6 +77,7 @@ def main():
     from server_websocket import StreamServer
     server = StreamServer()
     
+    tracker = create_tracker()
     # Get registered cameras from the server
     camera_registry = server.camera_registry.get_cameras()
     if not camera_registry:
