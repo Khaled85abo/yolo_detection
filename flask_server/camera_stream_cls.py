@@ -86,7 +86,9 @@ class CameraStream:
 
             # Try to open with OpenCV
             cap = cv2.VideoCapture(self.url)
-            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Attempt to minimize internal buffering
+            
+            # Important: Set these properties to ensure we get fresh frames
+            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Minimize buffering
             
             # Add a timeout for initial connection
             connection_start = time.time()
@@ -128,6 +130,9 @@ class CameraStream:
             print(f"Successfully connected to MJPEG stream at {self.url}")
             
             # If OpenCV connection was successful, read frames in a loop
+            frame_count = 0
+            last_frame_time = time.time()
+            
             while self.running:
                 # Read one frame
                 success, frame = cap.read()
@@ -136,28 +141,29 @@ class CameraStream:
                     self._retry_opencv_reconnect(cap)
                     continue
 
-                # ---- Flush older frames in the buffer to minimize latency ----
-                # We'll keep reading until no more frames are immediately available.
-                flushed_frame = None
-                while True:
-                    success2, frame2 = cap.read()
-                    if not success2:
-                        break
-                    flushed_frame = frame2
-                # If we did flush more frames, the last one is the newest
-                if flushed_frame is not None:
-                    frame = flushed_frame
-
+                # Calculate FPS for debugging
+                current_time = time.time()
+                elapsed = current_time - last_frame_time
+                fps = 1.0 / elapsed if elapsed > 0 else 0
+                last_frame_time = current_time
+                
                 # Optionally resize
                 if frame.shape[1] != self.frame_size[0] or frame.shape[0] != self.frame_size[1]:
                     frame = cv2.resize(frame, self.frame_size)
 
                 # Store frame in a thread‐safe manner
                 with self.lock:
-                    self.frame = frame
-                    self._add_to_queue(frame)
+                    self.frame = frame.copy()  # Make sure we're copying the frame
+                    self._add_to_queue(frame.copy())
 
+                frame_count += 1
+                if frame_count % 30 == 0:  # Log every 30 frames
+                    print(f"Camera {self.url}: Frame {frame_count}, FPS: {fps:.2f}")
+                
                 self.retry_count = 0  # Reset retry count on success
+                
+                # Small sleep to prevent CPU overload but not too long to miss frames
+                time.sleep(0.01)
 
             cap.release()
 
@@ -316,7 +322,10 @@ class CameraStream:
         if self.max_queue_size < 1:
             return  # queue disabled, do nothing
 
+        # Make sure we're adding a copy of the frame
         self.frame_queue.append(frame.copy())
+        
+        # Remove oldest frames if queue is too large
         while len(self.frame_queue) > self.max_queue_size:
             self.frame_queue.pop(0)
 
@@ -331,7 +340,6 @@ class CameraStream:
                 return self.frame.copy() if self.frame is not None else None
 
             # If queue has frames, get the newest (but don't pop it)
-            # This ensures we always have a frame available for the next call
             newest = self.frame_queue[-1].copy()
 
         if newest is not None and newest.size > 0:
