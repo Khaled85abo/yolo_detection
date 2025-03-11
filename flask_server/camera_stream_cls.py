@@ -75,8 +75,28 @@ class CameraStream:
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
             }
 
+            # Add authentication if provided in config
+            auth = self.config.get('auth', None)
+            if auth:
+                if 'username' in auth and 'password' in auth:
+                    auth_str = f"{auth['username']}:{auth['password']}"
+                    import base64
+                    auth_header = f"Basic {base64.b64encode(auth_str.encode()).decode()}"
+                    headers['Authorization'] = auth_header
+
+            # Try to open with OpenCV
             cap = cv2.VideoCapture(self.url)
             cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Attempt to minimize internal buffering
+            
+            # Add a timeout for initial connection
+            connection_start = time.time()
+            connection_timeout = self.connection_config.get('initial_timeout', 10)
+            
+            # Wait for the connection to be established or timeout
+            while not cap.isOpened() and time.time() - connection_start < connection_timeout:
+                print(f"Waiting for OpenCV to connect to {self.url}...")
+                time.sleep(0.5)
+                cap = cv2.VideoCapture(self.url)
 
             if not cap.isOpened():
                 print(f"OpenCV failed to open {self.url}, trying requests library...")
@@ -84,6 +104,29 @@ class CameraStream:
                 self._update_mjpeg_stream_requests(headers)
                 return
 
+            # Read initial frame to verify connection
+            initial_success = False
+            for _ in range(5):  # Try a few times to get the first frame
+                success, frame = cap.read()
+                if success and frame is not None and frame.size > 0:
+                    initial_success = True
+                    # Store this first frame
+                    if frame.shape[1] != self.frame_size[0] or frame.shape[0] != self.frame_size[1]:
+                        frame = cv2.resize(frame, self.frame_size)
+                    with self.lock:
+                        self.frame = frame
+                        self._add_to_queue(frame)
+                    break
+                time.sleep(0.2)
+            
+            if not initial_success:
+                print(f"Failed to read initial frame from {self.url}, trying requests library...")
+                cap.release()
+                self._update_mjpeg_stream_requests(headers)
+                return
+            
+            print(f"Successfully connected to MJPEG stream at {self.url}")
+            
             # If OpenCV connection was successful, read frames in a loop
             while self.running:
                 # Read one frame
@@ -128,6 +171,11 @@ class CameraStream:
         Fallback method if OpenCV fails.
         Parses the MJPEG stream chunk by chunk with the requests library.
         """
+        print(f"Attempting to connect to {self.url} using requests library")
+        
+        # Add a flag to track if we've successfully received at least one frame
+        received_first_frame = False
+        
         while self.running:
             try:
                 response = requests.get(
@@ -141,6 +189,8 @@ class CameraStream:
                     time.sleep(self.connection_config['retry_interval'])
                     continue
 
+                print(f"Connected to {self.url} with requests, parsing MJPEG stream")
+                
                 # Parse multipart/x-mixed-replace
                 bytes_data = bytes()
                 for chunk in response.iter_content(chunk_size=1024):
@@ -162,7 +212,12 @@ class CameraStream:
                             with self.lock:
                                 self.frame = frame
                                 self._add_to_queue(frame)
-                        self.retry_count = 0
+                            
+                            if not received_first_frame:
+                                print(f"Successfully received first frame from {self.url}")
+                                received_first_frame = True
+                            
+                            self.retry_count = 0
 
             except Exception as e:
                 print(f"Error in requests-based MJPEG stream for {self.url}: {e}")
@@ -275,10 +330,9 @@ class CameraStream:
                 # If queue is empty, fallback to self.frame (the single newest)
                 return self.frame.copy() if self.frame is not None else None
 
-            # If queue has frames, pop the newest
-            newest = self.frame_queue.pop()
-            # Optionally clear the queue entirely, so next call also sees the newest
-            self.frame_queue.clear()
+            # If queue has frames, get the newest (but don't pop it)
+            # This ensures we always have a frame available for the next call
+            newest = self.frame_queue[-1].copy()
 
         if newest is not None and newest.size > 0:
             return newest

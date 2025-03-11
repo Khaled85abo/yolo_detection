@@ -1,7 +1,6 @@
 from ultralytics import YOLO
 import time
 import numpy as np
-import threading
 from camera_stream_cls import CameraStream
 from utilities.process_frame import process_frame
 from utilities.draw_boxes import draw_boxes_and_orientations
@@ -29,122 +28,127 @@ def main():
     print(f"Server started on http://0.0.0.0:5000")
     time.sleep(2)  # Give the server time to start
     
-    # Get registered cameras from the server
-    camera_registry = server.camera_registry.get_cameras()
-    if not camera_registry:
-        print("No cameras registered with the server")
-        return
-        
-    print(f"Found {len(camera_registry)} cameras: {list(camera_registry.keys())}")
-    
     # Initialize camera objects
     camera_objects = {}
     camera_trackers = {}  # Dictionary to store trackers for each camera
-    for camera_id, camera_info in camera_registry.items():
-        # Initialize camera stream
-        this_camera_active = False
-        try:
-            camera_obj = CameraStream(camera_info)
-            print(f"Initialized camera stream: {camera_id} at {camera_info['url']}")
-            camera_obj.start()
-            validation_timeout = 3
-            validation_start= time.time()
-            while time.time() - validation_start < validation_timeout:
-                time.sleep(0.2)
-                test_frame = camera_obj.capture_array()
-                if test_frame is not None:
-                    this_camera_active = True
-                    active_cameras += 1
-                    print(f"Camera {camera_id} is active")
-                    break
-                else:
-                    print(f"Camera {camera_id} is not active")
-        except Exception as e:
-            print(f"Failed to initialize camera {camera_id}: {e}")
-            continue
-            
-        # Calculate ROI dimensions
-        roi = camera_info.get('roi', {
-            "width_start": 0.4,
-            "width_end": 0.6,
-            "height_start": 0.0,
-            "height_end": 1.0
-        })
-        
-        frame_width, frame_height = camera_info.get('frame_size', (640, 480))
-        
-        roi_frame_width, roi_frame_height = get_roi_frame(frame_width, frame_height, roi)
-            
-        print(f"Camera {camera_id}:")
-        print(f"  Stream type: {camera_info.get('stream_type', 'mjpeg')}")
-        print(f"  Target FPS: {camera_info.get('fps', 30)}")
-        
-        # Store camera with its configuration
-        camera_info["roi_frame_width"] = roi_frame_width
-        camera_info["roi_frame_height"] = roi_frame_height
-        if this_camera_active:
-            # Create a new tracker for this camera
-            camera_trackers[camera_id] = create_tracker()
-            camera_objects[camera_id] = {"camera": camera_obj, "config": camera_info}
-        else:
-            print(f"Camera {camera_id} failed validation - stopping camera")
-            camera_obj.stop()
-            
-            # IMPORTANT FIX: Unregister inactive cameras from the server
-            server.camera_registry.unregister_camera(camera_id)
-            
-            # Also remove from server's streaming system
-            if camera_id in server.cameras:
-                with server.frame_locks.get(camera_id, threading.Lock()):
-                    if camera_id in server.cameras:
-                        del server.cameras[camera_id]
-                    if camera_id in server.frame_locks:
-                        del server.frame_locks[camera_id]
-    # Start all cameras
-    for camera_id, camera_data in camera_objects.items():
-        print(f"Starting camera {camera_id}...")
-        camera_data["camera"].start()
     
     # Initialize video outputs
     try:
         from video_saving_cls import OutputVideo
         out_cls = {}
-        for camera_id, camera_data in camera_objects.items():
-            config = camera_data["config"]
-            recording_config = config.get("recording", {"enabled": True, "format": "mp4", "quality": "medium", "fps": 10})
-            
-            if not recording_config.get("enabled", True):
-                print(f"Recording disabled for camera {camera_id}")
-                continue
-                
-            # Set quality parameters based on configuration
-            quality = recording_config.get("quality", "medium")
-            if quality == "high":
-                bitrate = 2000000  # 2 Mbps
-            elif quality == "medium":
-                bitrate = 1000000  # 1 Mbps
-            else:  # low
-                bitrate = 500000   # 500 Kbps
-                
-            # Use the fps from the config file
-            out = OutputVideo(
-                fps=recording_config.get("fps", 10), 
-                frame_width=config["roi_frame_width"], 
-                frame_height=config["roi_frame_height"],
-                bitrate=bitrate
-            )
-            out.create_writer(name=camera_id, subfolder='pi')
-            out_cls[camera_id] = out
     except Exception as e:
         print(f"Failed to initialize OutputVideo: {str(e)}")
         return
     
+    # Last known camera registry state
+    last_registry_state = {}
+    
     # Main processing loop
     try:
         frame_count = 0
-        while True and active_cameras > 0:
+        while True:
+            # Check for changes in camera registry
+            current_registry = server.camera_registry.get_cameras()
+            
+            # Handle new cameras
+            for camera_id, camera_info in current_registry.items():
+                if camera_id not in last_registry_state:
+                    print(f"New camera detected: {camera_id}")
+                    try:
+                        # Initialize camera stream
+                        camera_obj = CameraStream(camera_info)
+                        print(f"Initialized camera stream: {camera_id} at {camera_info['url']}")
+                        camera_obj.start()
+                        validation_timeout = 5
+                        validation_start = time.time()
+                        camera_active = False
+                        
+                        while time.time() - validation_start < validation_timeout:
+                            time.sleep(0.5)
+                            test_frame = camera_obj.capture_array()
+                            if test_frame is not None and test_frame.size > 0 and np.mean(test_frame) > 5.0:
+                                camera_active = True
+                                active_cameras += 1
+                                print(f"Camera {camera_id} is active")
+                                break
+                            else:
+                                print(f"Waiting for camera {camera_id} to become active...")
+                        
+                        if camera_active:
+                            # Calculate ROI dimensions
+                            roi = camera_info.get('roi', {
+                                "width_start": 0.4,
+                                "width_end": 0.6,
+                                "height_start": 0.0,
+                                "height_end": 1.0
+                            })
+                            
+                            frame_width, frame_height = camera_info.get('frame_size', (640, 480))
+                            roi_frame_width, roi_frame_height = get_roi_frame(frame_width, frame_height, roi)
+                            
+                            # Create a new tracker for this camera
+                            camera_trackers[camera_id] = create_tracker()
+                            
+                            # Store camera with its configuration
+                            camera_info["roi_frame_width"] = roi_frame_width
+                            camera_info["roi_frame_height"] = roi_frame_height
+                            camera_objects[camera_id] = {"camera": camera_obj, "config": camera_info}
+                            
+                            # Set up video recording if enabled
+                            recording_config = camera_info.get("recording", {"enabled": True, "format": "mp4", "quality": "medium", "fps": 10})
+                            
+                            if recording_config.get("enabled", True):
+                                # Set quality parameters based on configuration
+                                quality = recording_config.get("quality", "medium")
+                                if quality == "high":
+                                    bitrate = 2000000  # 2 Mbps
+                                elif quality == "medium":
+                                    bitrate = 1000000  # 1 Mbps
+                                else:  # low
+                                    bitrate = 500000   # 500 Kbps
+                                    
+                                # Use the fps from the config file
+                                out = OutputVideo(
+                                    fps=recording_config.get("fps", 10), 
+                                    frame_width=roi_frame_width, 
+                                    frame_height=roi_frame_height,
+                                    bitrate=bitrate
+                                )
+                                out.create_writer(name=camera_id, subfolder='pi')
+                                out_cls[camera_id] = out
+                        else:
+                            print(f"Camera {camera_id} failed validation - stopping camera")
+                            camera_obj.stop()
+                            server.camera_registry.unregister_camera(camera_id)
+                    except Exception as e:
+                        print(f"Failed to initialize camera {camera_id}: {e}")
+            
+            # Handle removed cameras
+            for camera_id in list(camera_objects.keys()):
+                if camera_id not in current_registry:
+                    print(f"Camera removed: {camera_id}")
+                    # Stop the camera
+                    camera_objects[camera_id]["camera"].stop()
+                    # Release video writer if exists
+                    if camera_id in out_cls:
+                        out_cls[camera_id].release(writer_key=camera_id)
+                        del out_cls[camera_id]
+                    # Remove from our tracking
+                    del camera_objects[camera_id]
+                    if camera_id in camera_trackers:
+                        del camera_trackers[camera_id]
+                    active_cameras -= 1
+            
+            # Update last known state
+            last_registry_state = current_registry.copy()
+            
             frame_count += 1
             print(f"\n--- Frame {frame_count} ---")
+            
+            if active_cameras == 0:
+                print("No active cameras, waiting for cameras to be added...")
+                time.sleep(1)
+                continue
             
             loop_start = time.time()
             
@@ -228,10 +232,19 @@ def main():
                     f"write: {write_time:.3f}s"
                 )
             
+            # Calculate sleep time to maintain target FPS
             loop_end = time.time()
-            print(f"Total frame processing time: {(loop_end - loop_start):.3f}s")
+            processing_time = loop_end - loop_start
+            target_frame_time = 1.0 / custom_fps
             
-
+            # If processing was faster than target frame time, sleep to maintain FPS
+            # If processing was slower, continue immediately to catch up
+            sleep_time = max(0, target_frame_time - processing_time)
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+            
+            print(f"Total frame processing time: {(loop_end - loop_start):.3f}s, Sleep time: {sleep_time:.3f}s")
+            
     except KeyboardInterrupt:
         print("\nStopping capture...")
     finally:
