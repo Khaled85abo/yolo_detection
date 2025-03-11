@@ -117,9 +117,9 @@ def main():
                                 out.create_writer(name=camera_id, subfolder='pi')
                                 out_cls[camera_id] = out
                         else:
-                            print(f"Camera {camera_id} failed validation - stopping camera")
                             camera_obj.stop()
                             server.camera_registry.unregister_camera(camera_id)
+                            print(f"Camera {camera_id} failed validation - stopping camera and unregistering")
                     except Exception as e:
                         print(f"Failed to initialize camera {camera_id}: {e}")
             
