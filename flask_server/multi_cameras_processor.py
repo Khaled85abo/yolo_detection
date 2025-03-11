@@ -1,11 +1,7 @@
 from ultralytics import YOLO
-import cv2
 import time
-import threading
 import numpy as np
-import requests
-from urllib.parse import urlparse
-
+from camera_stream_cls import CameraStream
 from utilities.process_frame import process_frame
 from utilities.draw_boxes import draw_boxes_and_orientations
 from utilities.detect_stop import create_tracker, STOP_THRESHOLD_FRAMES, MOVEMENT_THRESHOLD, stop_detection_memory
@@ -18,210 +14,6 @@ custom_fps = 10
 # Initialize YOLO model
 model = YOLO('/home/rise/enter/train_yolo11n/weights/best_yolo11n.pt')
 
-class CameraStream:
-    def __init__(self, camera_config):
-        self.config = camera_config
-        self.url = camera_config['url']
-        self.stream_type = camera_config.get('stream_type', 'mjpeg')
-        self.frame = None
-        self.running = False
-        self.thread = None
-        self.connection_config = camera_config.get('connection', {
-            'timeout': 5,
-            'retry_interval': 1,
-            'max_retries': 3
-        })
-        self.frame_size = camera_config.get('frame_size', (640, 480))
-        self.fps = camera_config.get('fps', 30)
-        self.retry_count = 0
-        
-    def start(self):
-        self.running = True
-        self.thread = threading.Thread(target=self._update_frame, daemon=True)
-        self.thread.start()
-        
-    def stop(self):
-        self.running = False
-        if self.thread:
-            self.thread.join(timeout=1.0)
-            
-    def _update_frame(self):
-        if self.stream_type == 'mjpeg':
-            self._update_mjpeg_stream()
-        elif self.stream_type == 'jpeg':
-            self._update_jpeg_stream()
-        elif self.stream_type == 'rtsp':
-            self._update_rtsp_stream()
-        else:
-            print(f"Unknown stream type: {self.stream_type}, defaulting to MJPEG")
-            self._update_mjpeg_stream()
-    
-    def _update_mjpeg_stream(self):
-        try:
-            print(f"Connecting to MJPEG stream at {self.url}")
-            
-            # Add custom headers that some cameras might require
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-            
-            # Try using OpenCV's VideoCapture first
-            cap = cv2.VideoCapture(self.url)
-            
-            # Set buffer size based on FPS to avoid lag
-            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-            
-            # Check if OpenCV connection was successful
-            if not cap.isOpened():
-                print(f"OpenCV failed to open {self.url}, trying requests library...")
-                cap.release()
-                
-                # If OpenCV fails, try using requests library for more control
-                while self.running:
-                    try:
-                        response = requests.get(
-                            self.url, 
-                            stream=True, 
-                            timeout=self.connection_config['timeout'],
-                            headers=headers
-                        )
-                        
-                        if response.status_code != 200:
-                            print(f"Failed to connect to {self.url}, status: {response.status_code}")
-                            time.sleep(self.connection_config['retry_interval'])
-                            continue
-                            
-                        # Parse multipart/x-mixed-replace stream
-                        bytes_data = bytes()
-                        for chunk in response.iter_content(chunk_size=1024):
-                            bytes_data += chunk
-                            a = bytes_data.find(b'\xff\xd8')  # JPEG start
-                            b = bytes_data.find(b'\xff\xd9')  # JPEG end
-                            
-                            if a != -1 and b != -1:
-                                jpg = bytes_data[a:b+2]
-                                bytes_data = bytes_data[b+2:]
-                                
-                                # Decode the JPEG image
-                                frame = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
-                                
-                                if frame is not None and frame.size > 0:
-                                    # Resize frame if needed
-                                    if frame.shape[1] != self.frame_size[0] or frame.shape[0] != self.frame_size[1]:
-                                        frame = cv2.resize(frame, self.frame_size)
-                                    self.frame = frame
-                                    self.retry_count = 0
-                                    
-                                
-                    except Exception as e:
-                        print(f"Error in MJPEG stream for {self.url}: {e}")
-                        self.retry_count += 1
-                        
-                        if self.retry_count > self.connection_config['max_retries']:
-                            print(f"Max retries exceeded for {self.url}, waiting longer...")
-                            time.sleep(self.connection_config['retry_interval'] * 2)
-                            self.retry_count = 0
-                        else:
-                            time.sleep(self.connection_config['retry_interval'])
-                return
-            
-            # If OpenCV connection was successful, use it
-            while self.running:
-                success, frame = cap.read()
-                if success:
-                    # Resize frame if needed
-                    if frame.shape[1] != self.frame_size[0] or frame.shape[0] != self.frame_size[1]:
-                        frame = cv2.resize(frame, self.frame_size)
-                    self.frame = frame
-                    self.retry_count = 0
-
-                else:
-                    print(f"Failed to read from MJPEG stream: {self.url}")
-                    self.retry_count += 1
-                    if self.retry_count > self.connection_config['max_retries']:
-                        print(f"Max retries exceeded for {self.url}, reconnecting...")
-                        cap.release()
-                        time.sleep(self.connection_config['retry_interval'])
-                        cap = cv2.VideoCapture(self.url)
-                        self.retry_count = 0
-                    else:
-                        time.sleep(self.connection_config['retry_interval'])
-            
-            cap.release()
-            
-        except Exception as e:
-            print(f"Exception in MJPEG stream handler for {self.url}: {e}")
-            import traceback
-            traceback.print_exc()
-    
-    def _update_jpeg_stream(self):
-        while self.running:
-            try:
-                response = requests.get(
-                    self.url, 
-                    stream=True, 
-                    timeout=self.connection_config['timeout']
-                )
-                
-                if response.status_code == 200:
-                    img_array = np.asarray(bytearray(response.content), dtype=np.uint8)
-                    frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
-                    
-                    if frame is not None and frame.size > 0:
-                        self.frame = frame
-                        self.retry_count = 0
-                    else:
-                        print(f"Received empty frame from {self.url}")
-                        self.retry_count += 1
-                else:
-                    print(f"Failed to get image from {self.url}, status: {response.status_code}")
-                    self.retry_count += 1
-            except Exception as e:
-                print(f"Error fetching from {self.url}: {e}")
-                self.retry_count += 1
-            
-            # Handle retries
-            if self.retry_count > self.connection_config['max_retries']:
-                print(f"Max retries exceeded for {self.url}, waiting longer...")
-                time.sleep(self.connection_config['retry_interval'] * 2)
-                self.retry_count = 0
-            
-    
-    def _update_rtsp_stream(self):
-        # RTSP handling is similar to MJPEG but might need different settings
-        cap = cv2.VideoCapture(self.url)
-        
-        # RTSP-specific settings
-        cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Minimize buffer to reduce latency
-        
-        while self.running:
-            success, frame = cap.read()
-            if success:
-                self.frame = frame
-                self.retry_count = 0
-            else:
-                print(f"Failed to read from RTSP stream: {self.url}")
-                self.retry_count += 1
-                if self.retry_count > self.connection_config['max_retries']:
-                    print(f"Max retries exceeded for {self.url}, reconnecting...")
-                    cap.release()
-                    time.sleep(self.connection_config['retry_interval'])
-                    cap = cv2.VideoCapture(self.url)
-                    self.retry_count = 0
-                else:
-                    time.sleep(self.connection_config['retry_interval'])
-        
-        cap.release()
-                
-    def capture_array(self):
-        if self.frame is None:
-            return None
-        
-        # Resize frame if needed
-        if self.frame.shape[1] != self.frame_size[0] or self.frame.shape[0] != self.frame_size[1]:
-            return cv2.resize(self.frame, self.frame_size)
-            
-        return self.frame.copy()
 
 def main():
     print("Initializing camera processing client...")
@@ -242,7 +34,7 @@ def main():
     
     # Initialize video outputs
     try:
-        from video_saving_class import OutputVideo
+        from video_saving_cls import OutputVideo
         out_cls = {}
     except Exception as e:
         print(f"Failed to initialize OutputVideo: {str(e)}")
@@ -440,8 +232,18 @@ def main():
                     f"write: {write_time:.3f}s"
                 )
             
+            # Calculate sleep time to maintain target FPS
             loop_end = time.time()
-            print(f"Total frame processing time: {(loop_end - loop_start):.3f}s")
+            processing_time = loop_end - loop_start
+            target_frame_time = 1.0 / custom_fps
+            
+            # If processing was faster than target frame time, sleep to maintain FPS
+            # If processing was slower, continue immediately to catch up
+            sleep_time = max(0, target_frame_time - processing_time)
+            if sleep_time > 0:
+                time.sleep(sleep_time)
+            
+            print(f"Total frame processing time: {(loop_end - loop_start):.3f}s, Sleep time: {sleep_time:.3f}s")
             
     except KeyboardInterrupt:
         print("\nStopping capture...")
