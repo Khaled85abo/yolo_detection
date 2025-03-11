@@ -34,9 +34,7 @@ def main():
 
     print("Configuring camera settings...")
 
-    # Unregister any existing cameras for the server websocket to work
-    server.camera_registry.unregister_camera('camera1')
-    server.camera_registry.unregister_camera('camera2')
+
 
     
 
@@ -71,6 +69,8 @@ def main():
         from server_websocket import StreamServer
         print("Starting stream server...")
         server = StreamServer()
+        # Unregister any existing cameras for the server websocket to work
+        server.camera_registry.unregister_camera('camera1')
         server.add_camera('camera1', frame_size=(roi_width, roi_height))
         server_thread = server.run_threaded()
         print("Stream server started successfully")
