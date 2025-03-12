@@ -1,36 +1,147 @@
 from ultralytics import YOLO
 import time
 import numpy as np
-from camera_stream_cls import CameraStream
 from utilities.process_frame import process_frame
 from utilities.draw_boxes import draw_boxes_and_orientations
 from utilities.detect_stop import create_tracker, STOP_THRESHOLD_FRAMES, MOVEMENT_THRESHOLD, stop_detection_memory
+from camera_config import CAMERAS
+from picamera2 import Picamera2
+from camera_stream_cls import CameraStream
+import cv2
 
 # Default frame dimensions
 frame_width = 640
 frame_height = 480
 custom_fps = 10
 
+
+# ROI parameters
+ROI_width_start = 0.40
+ROI_width_end = 0.60
+ROI_height_start = 0.0  
+ROI_height_end = 1.0   
 # Initialize YOLO model
 model = YOLO('/home/rise/enter/train_yolo11n/weights/best_yolo11n.pt')
 
+ # Create a PiCamera wrapper that implements the same interface as CameraStream
+class PiCameraStream(CameraStream):
+    def __init__(self, camera_config, picam):
+        super().__init__(camera_config)
+        self.picam = picam
+        self.thread = None  # We'll override the thread behavior
+        
+    def start(self):
+        """Pi camera is already started, just set running flag"""
+        self.running = True
+        # No need to start a thread as we'll just capture directly
+        
+    def stop(self):
+        """Stop the Pi camera"""
+        self.running = False
+        if self.picam:
+            self.picam.stop()
+            
+    def capture_array(self):
+        """Capture a frame from the Pi camera"""
+        if self.running and self.picam:
+            frame = self.picam.capture_array()
+            # Resize if needed
+            if (frame.shape[1] != self.frame_size[0] or 
+                frame.shape[0] != self.frame_size[1]):
+                frame = cv2.resize(frame, self.frame_size)
+            return frame
+        return None
+        
+    def _update_frame(self):
+        """Override to prevent the thread from starting"""
+        pass
 
 def main():
+    print("Initializing pi camera...")
+    picam2 = Picamera2()
     print("Initializing camera processing client...")
     active_cameras = 0
-    # Import StreamServer to get camera registry and update frames
-    from server_websocket import StreamServer
+
+    roi_width, roi_height = get_roi_frame(frame_width, frame_height, {"width_start": ROI_width_start, "width_end": ROI_width_end, "height_start": ROI_height_start, "height_end": ROI_height_end})
+    
+
+    print(f"Full dimensions: {frame_width}x{frame_height}")
+    print(f"ROI dimensions: {roi_width}x{roi_height}")
+    
+    config = picam2.create_video_configuration(
+        main={"size": (frame_width, frame_height), "format": "RGB888"},
+        controls={"FrameDurationLimits": (33333, 33333)}  # ~30fps
+    )
+    picam2.configure(config)
+
+    picam2.set_controls({"AeEnable": True})
+
+    print("Starting camera...")
+    picam2.start()
+
+    camera_objects = {}
+    camera_trackers = {}  # Dictionary to store trackers for each camera
+    
+   
+
+    from server import StreamServer
     from utilities.get_roi_frame import get_roi_frame
     server = StreamServer()
+    
+    # Create a camera config for the Pi camera
+    picam_config = {
+        'id': 'picam',
+        'url': 'local_picamera',  # Just a placeholder
+        'stream_type': 'picamera',
+        'frame_size': (frame_width, frame_height),
+        'roi': {
+            "width_start": ROI_width_start,
+            "width_end": ROI_width_end,
+            "height_start": ROI_height_start,
+            "height_end": ROI_height_end
+        },
+        'processing': {'enabled': True},
+        'recording': {'enabled': True, 'format': 'mp4', 'quality': 'medium', 'fps': custom_fps}
+    }
+    
+    # Create PiCameraStream instance
+    picam_stream = PiCameraStream(picam_config, picam2)
+    picam_stream.start()
+    
+    # Add Pi camera to server
+    roi_width, roi_height = get_roi_frame(frame_width, frame_height, picam_config['roi'])
+    server.add_camera(picam_config['id'], frame_size=(roi_width, roi_height))
+    
+    # Create a tracker for Pi camera
+    camera_trackers[picam_config['id']] = create_tracker()
+    
+    # Add Pi camera to camera objects
+    picam_config["roi_frame_width"] = roi_width
+    picam_config["roi_frame_height"] = roi_height
+    camera_objects[picam_config['id']] = {"camera": picam_stream, "config": picam_config}
+    
+    # Add other cameras from CAMERAS config
+    for camera in CAMERAS:  
+        width, height = camera['frame_size']
+        roi = camera['roi']
+        roi_width, roi_height = get_roi_frame(width, height, roi)
+        # start the camera
+        camera_obj = CameraStream(camera)
+        camera_obj.start()
+        server.add_camera(camera['id'], frame_size=(roi_width, roi_height))
+        
+        # Create tracker for this camera
+        camera_trackers[camera['id']] = create_tracker()
+        
+        # Add camera to camera objects
+        camera["roi_frame_width"] = roi_width
+        camera["roi_frame_height"] = roi_height
+        camera_objects[camera['id']] = {"camera": camera_obj, "config": camera}
     
     # Start the server in a separate thread
     server_thread = server.run_threaded(host='0.0.0.0', port=5000)
     print(f"Server started on http://0.0.0.0:5000")
     time.sleep(2)  # Give the server time to start
-    
-    # Initialize camera objects
-    camera_objects = {}
-    camera_trackers = {}  # Dictionary to store trackers for each camera
     
     # Initialize video outputs
     try:
@@ -44,11 +155,11 @@ def main():
     try:
         frame_count = 0
         while True:
-            # Check for changes in camera registry
-            current_cameras = server.camera_configs
+            # Get the cameras from the server
+            server_cameras = server.cameras
             
             # Handle new cameras
-            for camera_id, camera_info in current_cameras.items():
+            for camera_id, camera_info in server_cameras.items():
                 if camera_id not in camera_objects:
                     print(f"New camera detected: {camera_id}")
                     try:
@@ -119,23 +230,6 @@ def main():
                             print(f"Camera {camera_id} failed validation - stopping camera and unregistering")
                     except Exception as e:
                         print(f"Failed to initialize camera {camera_id}: {e}")
-            
-            # Handle removed cameras
-            for camera_id in list(camera_objects.keys()):
-                if camera_id not in current_cameras:
-                    print(f"Camera removed: {camera_id}")
-                    # Stop the camera
-                    camera_objects[camera_id]["camera"].stop()
-                    # Release video writer if exists
-                    if camera_id in out_cls:
-                        out_cls[camera_id].release(writer_key=camera_id)
-                        del out_cls[camera_id]
-                    # Remove from our tracking
-                    del camera_objects[camera_id]
-                    if camera_id in camera_trackers:
-                        del camera_trackers[camera_id]
-                    active_cameras -= 1
-            
             frame_count += 1
             print(f"\n--- Frame {frame_count} ---")
             
