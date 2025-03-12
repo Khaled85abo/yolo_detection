@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Plank Detection System</title>
+    <style>
+        .status {
+            padding: 10px;
+            margin: 10px;
+            border: 1px solid #ccc;
+        }
+
+        .warning {
+            color: red;
+        }
+
+        .controls {
+            margin: 20px;
+        }
+
+        button {
+            padding: 10px;
+            margin: 5px;
+        }
+
+        .camera-feed {
+            margin-bottom: 20px;
+        }
+
+        /* New styles for rule configuration */
+        .rule-configuration {
+            margin: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+
+        .rule-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .rule-item {
+            flex: 1;
+            min-width: 250px;
+            padding: 10px;
+            border: 1px solid #eee;
+            border-radius: 5px;
+            background-color: white;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Plank Detection System</h1>
+
+    <!-- Camera Feeds -->
+    {% for camera_id in camera_ids %}
+    <div class="camera-feed">
+        <h2>Camera {{ camera_id }}</h2>
+        <img src="/video_feed/{{ camera_id }}" width="{{ frame_sizes[camera_id][0] }}"
+            height="{{ frame_sizes[camera_id][1] }}" />
+    </div>
+    {% endfor %}
+
+    <div class="status" id="status">
+        Loading status...
+    </div>
+
+    <div class="controls">
+        <button onclick="controlConveyor(true)" style="background-color: #ff4444;">Stop Conveyor</button>
+        <button onclick="controlConveyor(false)" style="background-color: #44ff44;">Start Conveyor</button>
+    </div>
+
+    <!-- Rule Configuration Section -->
+    <div class="rule-configuration">
+        <h2>Rule Configuration</h2>
+        <div class="rule-container">
+            <div class="rule-item">
+                <h3>When Overlap Detected:</h3>
+                <select id="overlap-action" onchange="updateRule('overlap', this.value)">
+                    <option value="ignore">Ignore</option>
+                    <option value="stop_conveyor">Stop Conveyor</option>
+                    <option value="alert">Alert Only</option>
+                </select>
+            </div>
+
+            <div class="rule-item">
+                <h3>When Stopped Plank Detected:</h3>
+                <select id="stop-action" onchange="updateRule('stop', this.value)">
+                    <option value="ignore">Ignore</option>
+                    <option value="stop_conveyor">Stop Conveyor</option>
+                    <option value="alert">Alert Only</option>
+                </select>
+            </div>
+
+            <div class="rule-item">
+                <h3>When Incorrect Plank Detected:</h3>
+                <select id="incorrect-action" onchange="updateRule('incorrect', this.value)">
+                    <option value="ignore">Ignore</option>
+                    <option value="stop_conveyor">Stop Conveyor</option>
+                    <option value="alert">Alert Only</option>
+                </select>
+            </div>
+        </div>
+        <button onclick="saveRules()" style="background-color: #4488ff; margin-top: 10px;">Save Rules</button>
+    </div>
+
+    <div id="warnings">
+        <div id="stopped" class="warning inactive">
+            <h3>Stopped Plank</h3>
+            <button onclick="acknowledge('stopped')">Acknowledge</button>
+        </div>
+    </div>
+
+    <script>
+        // Replace Socket.IO with native WebSocket
+        let socket;
+        let connectionStatus = 'disconnected';
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 10;
+        const reconnectDelay = 1000;
+
+        // Rules configuration
+        let rules = {
+            overlap: 'ignore',
+            stop: 'ignore',
+            incorrect: 'ignore'
+        };
+
+        // Load saved rules from localStorage if available
+        function loadSavedRules() {
+            const savedRules = localStorage.getItem('plankDetectionRules');
+            if (savedRules) {
+                rules = JSON.parse(savedRules);
+
+                // Update the UI to reflect saved rules
+                document.getElementById('overlap-action').value = rules.overlap;
+                document.getElementById('stop-action').value = rules.stop;
+                document.getElementById('incorrect-action').value = rules.incorrect;
+
+                console.log('Loaded saved rules:', rules);
+            }
+        }
+
+        // Update rule in memory
+        function updateRule(condition, action) {
+            rules[condition] = action;
+            console.log(`Rule updated: When ${condition} detected, ${action}`);
+        }
+
+        // Save rules to localStorage and send to server
+        function saveRules() {
+            localStorage.setItem('plankDetectionRules', JSON.stringify(rules));
+
+            // Send rules to server if WebSocket is connected
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.send(JSON.stringify({
+                    event: 'update_rules',
+                    data: rules
+                }));
+                console.log('Rules sent to server:', rules);
+                alert('Rules saved successfully!');
+            } else {
+                console.error('WebSocket not connected, rules saved locally only');
+                alert('Rules saved locally. Server connection unavailable.');
+            }
+        }
+
+        // Apply rules based on status updates
+        function applyRules(status) {
+            console.log('Applying rules to status:', status);
+
+            // Check each condition and apply the configured action
+            if (status.overlap && rules.overlap === 'stop_conveyor') {
+                controlConveyor(true); // Stop the conveyor
+                console.log('Rule applied: Stopping conveyor due to overlap');
+            }
+
+            if (status.stop && rules.stop === 'stop_conveyor') {
+                controlConveyor(true); // Stop the conveyor
+                console.log('Rule applied: Stopping conveyor due to stopped plank');
+            }
+
+            if (status.incorrect && rules.incorrect === 'stop_conveyor') {
+                controlConveyor(true); // Stop the conveyor
+                console.log('Rule applied: Stopping conveyor due to incorrect plank');
+            }
+
+            // Alert handling could be added here for 'alert' actions
+        }
+
+        function connectWebSocket() {
+            // Create WebSocket connection
+            const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+            const wsUrl = protocol + window.location.host + '/ws';
+
+            console.log('Connecting to WebSocket at:', wsUrl);
+
+            // Close existing socket if it exists
+            if (socket) {
+                try {
+                    socket.close();
+                } catch (e) {
+                    console.error("Error closing existing socket:", e);
+                }
+            }
+
+            socket = new WebSocket(wsUrl);
+
+            socket.onopen = function () {
+                console.log('Connected to server websocket');
+                connectionStatus = 'connected';
+                document.getElementById('connection-status').textContent = 'Connected';
+                reconnectAttempts = 0;
+
+                // Send current rules to server on connection
+                if (Object.keys(rules).length > 0) {
+                    socket.send(JSON.stringify({
+                        event: 'update_rules',
+                        data: rules
+                    }));
+                    console.log('Sent rules to server on connection');
+                }
+            };
+
+            socket.onmessage = function (event) {
+                console.log('Raw message received:', event.data);
+                try {
+                    const data = JSON.parse(event.data);
+                    console.log('Parsed message:', data);
+
+                    // Handle different event types
+                    if (data.event === 'status_update') {
+                        updateStatusDisplay(data.data);
+                        applyRules(data.data); // Apply rules to the new status
+                    }
+                    // Add more event handlers as needed
+                } catch (error) {
+                    console.error('Error parsing message:', error, event.data);
+                }
+            };
+
+            socket.onerror = function (error) {
+                console.error('WebSocket error:', error);
+                document.getElementById('connection-status').textContent = 'Connection Error';
+
+                // Try to reconnect immediately on error
+                if (connectionStatus === 'connected') {
+                    setTimeout(connectWebSocket, 1000);
+                }
+            };
+
+            socket.onclose = function (event) {
+                console.log('Disconnected from server websocket:', event.reason);
+                connectionStatus = 'disconnected';
+                document.getElementById('connection-status').textContent = 'Disconnected';
+
+                // Handle reconnection
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    reconnectAttempts++;
+                    const delay = reconnectDelay * Math.min(reconnectAttempts, 5); // Cap the delay multiplication
+                    console.log(`Attempting to reconnect in ${delay}ms (attempt ${reconnectAttempts}/${maxReconnectAttempts})...`);
+
+                    setTimeout(connectWebSocket, delay);
+                } else {
+                    console.log('Max reconnection attempts reached');
+                    document.getElementById('connection-status').textContent = 'Reconnection Failed';
+                }
+            };
+        }
+
+        // Initial connection and rule loading
+        window.addEventListener('load', function () {
+            connectWebSocket();
+            loadSavedRules();
+        });
+
+        // Add a ping function to keep the connection alive
+        setInterval(function () {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                try {
+                    socket.send(JSON.stringify({ event: 'ping', data: {} }));
+                    console.log('Ping sent');
+                } catch (e) {
+                    console.error('Error sending ping:', e);
+                }
+            }
+        }, 30000); // Send ping every 30 seconds
+
+        function updateStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => updateStatusDisplay(data))
+                .catch(err => console.error('Error fetching status:', err));
+        }
+
+        function updateStatusDisplay(data) {
+            console.log('Updating status display:', data);
+            document.getElementById('status').innerHTML = `
+                    <p>Conveyor: <strong>${data.conveyor_stop ? '⛔ STOPPED' : '✅ RUNNING'}</strong></p>
+                    <p>Overlapped: <strong>${data.overlap ? '⚠️ YES' : '✅ NO'}</strong></p>
+                    <p>Stopped: <strong>${data.stop ? '⚠️ YES' : '✅ NO'}</strong></p>
+                    <p>Incorrect: <strong>${data.incorrect ? '⚠️ YES' : '✅ NO'}</strong></p>
+                `;
+        }
+
+        window.controlConveyor = function (state) {
+            console.log("Control conveyor action:", state);
+
+            // Using WebSocket to control conveyor when connected
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                const message = JSON.stringify({
+                    event: 'control_conveyor',
+                    data: { state: state }
+                });
+                socket.send(message);
+                console.log('Sent via WebSocket:', message);
+            } else {
+                // Fallback to HTTP API if WebSocket is not connected
+                console.log('WebSocket not connected, using HTTP API');
+                fetch('/api/control_conveyor', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ state: state })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Control conveyor response:', data);
+                        updateStatus();
+                    })
+                    .catch(err => console.error('Error controlling conveyor:', err));
+            }
+        };
+
+        // Optional manual status updates as backup
+        // updateStatus();
+        // setInterval(updateStatus, 5000);
+    </script>
+
+    <!-- Connection Status Display -->
+    <div style="position: fixed; top: 10px; right: 10px; background-color: #eee; padding: 5px; border-radius: 5px;">
+        WebSocket: <span id="connection-status">Initializing...</span>
+    </div>
+</body>
+
+</html>
