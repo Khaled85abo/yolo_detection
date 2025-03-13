@@ -15,7 +15,7 @@ import time
 
 from utilities.process_frame import process_frame
 from utilities.draw_boxes import draw_boxes_and_orientations
-from utilities.detect_stop import tracker
+from utilities.detect_stop import create_tracker
 #   
 frame_width = 640
 frame_height = 480
@@ -40,7 +40,7 @@ def main():
     print("Configuring camera settings...")
     
 
-
+    tracker = create_tracker()
 
     # Ensure ROI dimensions are even
     # roi_width = int(frame_width * (ROI_width_end - ROI_width_start))
@@ -90,7 +90,7 @@ def main():
         print(f"Failed to initialize OutputVideo: {str(e)}")
         return
 
-
+    
 
     try:
         
