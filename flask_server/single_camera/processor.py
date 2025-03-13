@@ -3,6 +3,12 @@
 # eventlet.monkey_patch()
 
 
+import sys
+import os
+# Add the parent directory to the path so we can import utilities
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
 from ultralytics import YOLO
 from picamera2 import Picamera2
 import time
