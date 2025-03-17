@@ -289,13 +289,17 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             Serial.print("Event name: ");
             Serial.println(event);
 
-            if (strcmp(event, "status_update") == 0)
-            {
-                handleStatusUpdate(doc["data"]);
-            }
+            // if (strcmp(event, "status_update") == 0)
+            // {
+            //     handleStatusUpdate(doc["data"]);
+            // }
             else if (strcmp(event, "control_conveyor") == 0)
             {
                 handleConveyorControl(doc["data"]);
+            }
+            else if (strcmp(event, "rules_applied") == 0)
+            {
+                handleRulesApplied(doc["data"]);
             }
         }
         break;
@@ -379,4 +383,42 @@ void handleStatusUpdate(const JsonDocument &data)
         digitalWrite(PLANK_INCORRECT_LED, LOW);
     // if (!conveyorStopLedActive)
     //     digitalWrite(CONVEYOR_STOP_LED, LOW);
+}
+
+void handleRulesApplied(const JsonDocument &data)
+{
+    Serial.println("Rules applied received:");
+    Serial.println("  Stop: " + String(data["stop_conveyor"]));
+    Serial.println("  Alert: " + String(data["alert"].size()));
+    Serial.println("  Ignore: " + String(data["ignore"].size()));
+
+    // If stop_conveyor is true, stop the conveyor
+    if (data["stop_conveyor"])
+        stopConveyor();
+
+    // Process alerts - check if specific conditions are in the alert array
+    JsonArray alertArray = data["alert"];
+    plankStopLedActive = false;
+    plankOverlapLedActive = false;
+    plankIncorrectLedActive = false;
+
+    for (JsonVariant value : alertArray)
+    {
+        const char *alertType = value.as<const char *>();
+        if (strcmp(alertType, "stop") == 0)
+        {
+            plankStopLedActive = true;
+        }
+        else if (strcmp(alertType, "overlap") == 0)
+        {
+            plankOverlapLedActive = true;
+        }
+        else if (strcmp(alertType, "incorrect") == 0)
+        {
+            plankIncorrectLedActive = true;
+        }
+    }
+
+    // Process ignores - we don't need to do anything here as we've already reset all LEDs
+    // and only set the ones that are in the alert array
 }

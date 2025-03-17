@@ -336,36 +336,32 @@ class StreamServer:
             }
             
             # Check each condition and apply the configured action
-            actions_taken = []
+            # actions will be 
+            # {
+            #     "stop_conveyor": True | False,
+            #     "alert": ["incorrect", "overlap", "stop"],
+            #     "ignore": ["incorrect", "overlap", "stop"]
+            # }
+            actions_taken = { 
+                "stop_conveyor": False,
+                "alert": [],
+                "ignore": []
+            }
             
             for condition, is_active in status.items():
                 if is_active and self.rules[condition] == 'stop_conveyor' and not self.plank_status.conveyor_stop:
-                    # emit the command to stop the conveyor
-                    self.send_to_all_clients({
-                        'event': 'control_conveyor', 
-                        'data': {'state': True}
-                    })
-                    actions_taken.append(f"Stopped conveyor due to {condition}")
+                    actions_taken["stop_conveyor"] = True
                 elif is_active and self.rules[condition] == 'alert':
-                    # emit the command to alert
-                    self.send_to_all_clients({
-                        'event': 'alert', 
-                        'data': {'message': f"Alert: {condition} detected"}
-                    })
-                    actions_taken.append(f"Alerted due to {condition}")
+                    actions_taken["alert"].append(condition)
                 elif is_active and self.rules[condition] == 'ignore':
-                    # emit the command to ignore
-                    self.send_to_all_clients({
-                        'event': 'ignore', 
-                        'data': {'message': f"Ignored {condition}"}
-                    })
-                    actions_taken.append(f"Ignored {condition}")
+                    actions_taken["ignore"].append(condition)
             
-            if actions_taken:
+            if len(actions_taken.keys()) > 0:
                 print(f"Rules applied: {', '.join(actions_taken)}")
-                self.emit_status()  # Update all clients with new status
-                
-            return True
+                self.send_to_all_clients({
+                        'event': 'rules_applied', 
+                        'data': actions_taken
+                    })
         except Exception as e:
             print(f"Error applying rules: {e}")
             return False
