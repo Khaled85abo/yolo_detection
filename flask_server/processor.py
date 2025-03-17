@@ -62,22 +62,22 @@ def main():
     print("Initializing camera processing client...")
     active_cameras = 0
 
-    roi_width, roi_height = get_roi_frame(frame_width, frame_height, {"width_start": ROI_width_start, "width_end": ROI_width_end, "height_start": ROI_height_start, "height_end": ROI_height_end})
+    # roi_width, roi_height = get_roi_frame(frame_width, frame_height, {"width_start": ROI_width_start, "width_end": ROI_width_end, "height_start": ROI_height_start, "height_end": ROI_height_end})
     
 
-    print(f"Full dimensions: {frame_width}x{frame_height}")
-    print(f"ROI dimensions: {roi_width}x{roi_height}")
+    # print(f"Full dimensions: {frame_width}x{frame_height}")
+    # print(f"ROI dimensions: {roi_width}x{roi_height}")
     
-    config = picam2.create_video_configuration(
-        main={"size": (frame_width, frame_height), "format": "RGB888"},
-        controls={"FrameDurationLimits": (33333, 33333)}  # ~30fps
-    )
-    picam2.configure(config)
+    # config = picam2.create_video_configuration(
+    #     main={"size": (frame_width, frame_height), "format": "RGB888"},
+    #     controls={"FrameDurationLimits": (33333, 33333)}  # ~30fps
+    # )
+    # picam2.configure(config)
 
-    picam2.set_controls({"AeEnable": True})
+    # picam2.set_controls({"AeEnable": True})
 
-    print("Starting camera...")
-    picam2.start()
+    # print("Starting camera...")
+    # picam2.start()
 
     camera_objects = {}
     camera_trackers = {}  # Dictionary to store trackers for each camera

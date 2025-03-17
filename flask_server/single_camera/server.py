@@ -5,8 +5,11 @@ from queue import Queue
 import logging
 from typing import Dict, List
 import os
+
 from flask import Blueprint, current_app
 from simple_websocket import Server as WebSocketServer, ConnectionClosed
+
+
 
 class PlankStatus:
     def __init__(self):
@@ -44,12 +47,14 @@ class StreamServer:
                     'stop': 'ignore',
                     'incorrect': 'ignore'
                 }
+                cls._instance.rules_options = ['ignore', 'stop_conveyor', 'alert']
                 
                 # Add routes
                 cls._instance.app.route('/')(cls._instance.index)
                 cls._instance.app.route('/video_feed/<camera_id>')(cls._instance.video_feed)
                 cls._instance.app.route('/api/status', methods=['GET'])(cls._instance.get_status)
                 cls._instance.app.route('/api/control_conveyor', methods=['POST'])(cls._instance.control_conveyor)
+                cls._instance.app.route('/api/rules', methods=['POST'])(cls._instance.update_rules)
                 
                 # Add websocket route
                 # cls._instance.app.route('/ws')(cls._instance.websocket_route)
@@ -73,6 +78,7 @@ class StreamServer:
             
             # Emit initial status immediately after connection
             self.emit_status()
+            self.emit_rules()
             
             try:
                 while True:
@@ -127,6 +133,19 @@ class StreamServer:
             state = data['state']
             self.send_to_all_clients({'event': 'control_conveyor', 'data': {'state': state}})
 
+    # def take_action(self):
+    #     """
+    #     This method will be called after status update to take action according to the rules
+    #     This is the command from the ESP32 to take action according to the rules
+    #     actions can be to show a warning, stop the conveyor or do nothing
+    #     """
+    #     print("take_action received:")
+
+
+    #     if isinstance(data, dict) and 'action' in data:
+    #         action = data['action']
+    #         self.send_to_all_clients({'event': 'take_action', 'data': {'action': action}})
+
     def control_conveyor(self):
         """API endpoint to control conveyor
         This is the command from the UI to control the conveyor
@@ -152,6 +171,20 @@ class StreamServer:
             self.send_to_all_clients({'event': 'status_update', 'data': status_data})
         except Exception as e:
             print(f"Error emitting status: {e}")
+
+    def emit_rules(self):
+        """Emit the rules to all connected clients"""
+        try:
+            self.send_to_all_clients({'event': 'rules_update', 'data': {'rules': self.rules, 'rules_options': self.rules_options}})
+        except Exception as e:
+            print(f"Error emitting rules: {e}")
+
+    def update_rules(self, data):
+        """Handle rules from the client"""
+        print("update_rules received:", data)
+        if isinstance(data, dict):
+            self.rules = data
+            self.emit_rules()
             
     def send_to_all_clients(self, data):
         """Send data to all connected websocket clients"""
@@ -237,25 +270,25 @@ class StreamServer:
     def update_status(self, overlapped=None, stopped=None, incorrect=None):
         """Update the status of planks"""
         print("Updating status:", overlapped, stopped, incorrect)
+
+        sorted_overlapped = sorted(overlapped) if overlapped is not None else None
+        sorted_stopped = sorted(stopped) if stopped is not None else None
+        sorted_incorrect = sorted(incorrect) if incorrect is not None else None
         
-        # Store previous state to check for changes
-        prev_overlap = self.plank_status.overlap.copy()
-        prev_stop = self.plank_status.stop.copy()
-        prev_incorrect = self.plank_status.incorrect.copy()
-        
-        # Update the state
-        if overlapped is not None:
-            self.plank_status.overlap = overlapped
-        if stopped is not None:
-            self.plank_status.stop = stopped
-        if incorrect is not None:
-            self.plank_status.incorrect = incorrect
-        
-        # Only emit if state has changed
-        if (prev_overlap != self.plank_status.overlap or 
-            prev_stop != self.plank_status.stop or 
-            prev_incorrect != self.plank_status.incorrect):
+        # Only update, emit and apply rules if state has changed
+        if ((sorted_overlapped is not None and sorted_overlapped != self.plank_status.overlap) or 
+            (sorted_stopped is not None and sorted_stopped != self.plank_status.stop) or 
+            (sorted_incorrect is not None and sorted_incorrect != self.plank_status.incorrect)):
+            
             print("State changed, emitting status update")
+            
+            if sorted_overlapped is not None:
+                self.plank_status.overlap = sorted_overlapped
+            if sorted_stopped is not None:
+                self.plank_status.stop = sorted_stopped
+            if sorted_incorrect is not None:
+                self.plank_status.incorrect = sorted_incorrect
+                
             self.emit_status()
             # Apply rules after status update
             self.apply_rules()
@@ -270,8 +303,11 @@ class StreamServer:
             'conveyor_stop': self.plank_status.conveyor_stop
         })
 
-    def update_rules(self, rules_data):
+
+    def update_rules(self, rules_data = None):
         """Update the rules configuration"""
+        if rules_data is None:
+            rules_data = request.json
         try:
             print(f"Updating rules: {rules_data}")
             # Validate the rules data
@@ -304,13 +340,26 @@ class StreamServer:
             
             for condition, is_active in status.items():
                 if is_active and self.rules[condition] == 'stop_conveyor' and not self.plank_status.conveyor_stop:
-                    # Stop the conveyor
-                    self.plank_status.conveyor_stop = True
+                    # emit the command to stop the conveyor
                     self.send_to_all_clients({
                         'event': 'control_conveyor', 
                         'data': {'state': True}
                     })
                     actions_taken.append(f"Stopped conveyor due to {condition}")
+                elif is_active and self.rules[condition] == 'alert':
+                    # emit the command to alert
+                    self.send_to_all_clients({
+                        'event': 'alert', 
+                        'data': {'message': f"Alert: {condition} detected"}
+                    })
+                    actions_taken.append(f"Alerted due to {condition}")
+                elif is_active and self.rules[condition] == 'ignore':
+                    # emit the command to ignore
+                    self.send_to_all_clients({
+                        'event': 'ignore', 
+                        'data': {'message': f"Ignored {condition}"}
+                    })
+                    actions_taken.append(f"Ignored {condition}")
             
             if actions_taken:
                 print(f"Rules applied: {', '.join(actions_taken)}")
