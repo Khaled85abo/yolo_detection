@@ -198,10 +198,24 @@ void loop()
     }
     if (!connected)
     {
-        digitalWrite(PLANK_STOP_LED, HIGH);
-        digitalWrite(PLANK_OVERLAP_LED, HIGH);
-        digitalWrite(PLANK_INCORRECT_LED, HIGH);
+        turnAllLEDsOn();
     }
+}
+
+void turnAllLEDsOff()
+{
+    digitalWrite(PLANK_STOP_LED, LOW);
+    digitalWrite(PLANK_OVERLAP_LED, LOW);
+    digitalWrite(PLANK_INCORRECT_LED, LOW);
+    digitalWrite(CONVEYOR_STOP_LED, LOW);
+}
+
+void turnAllLEDsOn()
+{
+    digitalWrite(PLANK_STOP_LED, HIGH);
+    digitalWrite(PLANK_OVERLAP_LED, HIGH);
+    digitalWrite(PLANK_INCORRECT_LED, HIGH);
+    digitalWrite(CONVEYOR_STOP_LED, HIGH);
 }
 
 void startConveyor()
@@ -259,6 +273,7 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         connected = true;
         lastPing = millis();
         // Send initial status update after connection
+        turnAllLEDsOff();
         updateConveyorStatus();
         startConveyor();
         break;

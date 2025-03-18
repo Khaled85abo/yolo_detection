@@ -310,7 +310,7 @@ class StreamServer:
                 return False
 
             # Update the rules
-            for key in self.rules_data.keys():
+            for key in self.rules.keys():
                 if key in rules_data and rules_data[key] in self.rules_options:
                     self.rules[key] = rules_data[key]
             
