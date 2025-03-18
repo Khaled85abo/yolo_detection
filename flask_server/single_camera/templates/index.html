@@ -10,84 +10,79 @@
 </head>
 
 <body>
-    <div class="dashboard-container">
-        <header>
-            <h1>Plank Detection System</h1>
-            <!-- Connection Status Display -->
-            <div class="connection-status">
-                <span class="status-indicator status-initializing"></span>
-                <span id="connection-status">Initializing...</span>
+    <div class="container">
+        <h1>Plank Detection System</h1>
+
+        <div class="wrapper">
+            <!-- Camera Feeds -->
+            {% for camera_id in camera_ids %}
+            <div class="camera-feed">
+                <h2>Camera {{ camera_id }}</h2>
+                <img src="/video_feed/{{ camera_id }}" width="{{ frame_sizes[camera_id][0] }}"
+                    height="{{ frame_sizes[camera_id][1] }}" />
             </div>
-        </header>
+            {% endfor %}
 
-        <div class="dashboard-layout">
-            <!-- Left Panel: Camera Feeds -->
-            <div class="panel camera-panel">
-                <h2>Camera Feeds</h2>
-                <div class="camera-feeds-container">
-                    {% for camera_id in camera_ids %}
-                    <div class="camera-feed">
-                        <h3>Camera {{ camera_id }}</h3>
-                        <img src="/video_feed/{{ camera_id }}" width="{{ frame_sizes[camera_id][0] }}"
-                            height="{{ frame_sizes[camera_id][1] }}" />
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
 
-            <!-- Right Panel: Status and Controls -->
-            <div class="panel control-panel">
-                <!-- Status Section -->
-                <div class="section status" id="status">
-                    <h2>System Status</h2>
-                    <p>Loading status...</p>
-                </div>
-
-                <!-- Controls Section -->
-                <div class="section controls">
-                    <h2>Conveyor Controls</h2>
-                    <div class="control-buttons">
-                        <button class="btn-stop" onclick="controlConveyor(true)">Stop Conveyor</button>
-                        <button class="btn-start" onclick="controlConveyor(false)">Start Conveyor</button>
-                    </div>
-                </div>
-
-                <!-- Rule Configuration Section -->
-                <div class="section rule-configuration">
-                    <h2>Rule Configuration</h2>
-                    <div class="rule-container">
-                        <div class="rule-item">
-                            <h3>When Overlap Detected:</h3>
-                            <select id="overlap-action" onchange="updateRule('overlap', this.value)">
-                                <option value="ignore">Ignore</option>
-                                <option value="stop_conveyor">Stop Conveyor</option>
-                                <option value="alert">Alert Only</option>
-                            </select>
+            <div class="info-section">
+                <div class="status-rules">
+                    <div class="status-container">
+                        <h4>Conveyro Status</h4>
+                        <div id="status">
+                            <p>Loading status...</p>
                         </div>
-
-                        <div class="rule-item">
-                            <h3>When Stopped Plank Detected:</h3>
-                            <select id="stop-action" onchange="updateRule('stop', this.value)">
-                                <option value="ignore">Ignore</option>
-                                <option value="stop_conveyor">Stop Conveyor</option>
-                                <option value="alert">Alert Only</option>
-                            </select>
-                        </div>
-
-                        <div class="rule-item">
-                            <h3>When Incorrect Plank Detected:</h3>
-                            <select id="incorrect-action" onchange="updateRule('incorrect', this.value)">
-                                <option value="ignore">Ignore</option>
-                                <option value="stop_conveyor">Stop Conveyor</option>
-                                <option value="alert">Alert Only</option>
-                            </select>
+                        <div class="controls">
+                            <button class="btn-stop" onclick="controlConveyor(true)">Stop Conveyor</button>
+                            <button class="btn-start" onclick="controlConveyor(false)">Start Conveyor</button>
                         </div>
                     </div>
-                    <button class="btn-save-rules">Save Rules</button>
+
+                    <div class="rule-configuration">
+                        <h4>Rule Configuration</h4>
+                        <div class="rule-container">
+                            <div class="rule-item">
+                                <h3>When Overlap Detected:</h3>
+                                <select id="overlap-action" onchange="updateRule('overlap', this.value)">
+                                    <option value="ignore">Ignore</option>
+                                    <option value="stop_conveyor">Stop Conveyor</option>
+                                    <option value="alert">Alert</option>
+                                </select>
+                            </div>
+
+                            <div class="rule-item">
+                                <h3>When Stopped Plank Detected:</h3>
+                                <select id="stop-action" onchange="updateRule('stop', this.value)">
+                                    <option value="ignore">Ignore</option>
+                                    <option value="stop_conveyor">Stop Conveyor</option>
+                                    <option value="alert">Alert</option>
+                                </select>
+                            </div>
+
+                            <div class="rule-item">
+                                <h3>When Incorrect Plank Detected:</h3>
+                                <select id="incorrect-action" onchange="updateRule('incorrect', this.value)">
+                                    <option value="ignore">Ignore</option>
+                                    <option value="stop_conveyor">Stop Conveyor</option>
+                                    <option value="alert">Alert</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn-save-rules">Save Rules</button>
+                    </div>
                 </div>
             </div>
+
+
+
         </div>
+
     </div>
+    <!-- Connection Status Display -->
+    <div class="connection-status">
+        <span class="status-indicator status-initializing"></span>
+        <span id="connection-status">Initializing...</span>
+    </div>
+
 </body>
 
 </html>
