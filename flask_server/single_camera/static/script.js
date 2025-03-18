@@ -48,15 +48,16 @@ function updateRule(condition, action) {
 function saveRules() {
     // Get the current rules from the UI
     const updatedRules = {};
+    console.log('Saving rules');
+    console.log(updatedRules);
     document.querySelectorAll('.rule-item').forEach(item => {
         const key = item.querySelector('h3').textContent.replace(':', '').trim().toLowerCase();
         const value = item.querySelector('select').value;
         updatedRules[key] = value;
     });
 
-    // Save to localStorage
-    localStorage.setItem('plankDetectionRules', JSON.stringify(updatedRules));
-
+    console.log('Updated rules');
+    console.log(updatedRules);
     // Send rules to server if WebSocket is connected
     if (socket && socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({

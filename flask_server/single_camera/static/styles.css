@@ -200,6 +200,10 @@
      background-color: var(--warning-color);
  }
 
+ .btn-save-rules {
+     color: var(--dark-color);
+ }
+
  /* Responsive design */
  @media (max-width: 768px) {
      .rule-container {
