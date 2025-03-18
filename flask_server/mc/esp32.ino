@@ -234,18 +234,6 @@ void stopConveyor()
     digitalWrite(CONVEYOR_STOP_LED, HIGH);
 }
 
-// Helper function to send ping
-void sendPing()
-{
-    StaticJsonDocument<128> doc;
-    doc["event"] = "ping";
-    JsonObject data = doc.createNestedObject("data");
-
-    String jsonString;
-    serializeJson(doc, jsonString);
-    webSocket.sendTXT(jsonString);
-}
-
 // Keep the API endpoint handler separate
 void getStatus()
 {
@@ -274,8 +262,8 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
         lastPing = millis();
         // Send initial status update after connection
         turnAllLEDsOff();
-        updateConveyorStatus();
         startConveyor();
+        updateConveyorStatus();
         break;
 
     case WStype_TEXT:
@@ -461,4 +449,16 @@ void processAlertType(const char *alertType)
     {
         plankIncorrectLedActive = true;
     }
+}
+
+// Helper function to send ping
+void sendPing()
+{
+    StaticJsonDocument<128> doc;
+    doc["event"] = "ping";
+    JsonObject data = doc.createNestedObject("data");
+
+    String jsonString;
+    serializeJson(doc, jsonString);
+    webSocket.sendTXT(jsonString);
 }

@@ -220,3 +220,127 @@
          max-width: 300px;
      }
  }
+
+ /* Dashboard Layout */
+ .dashboard-container {
+     max-width: 100%;
+     margin: 0 auto;
+     height: 100vh;
+     display: flex;
+     flex-direction: column;
+ }
+
+ header {
+     display: flex;
+     justify-content: space-between;
+     align-items: center;
+     padding: 10px 20px;
+     background-color: white;
+     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+     position: sticky;
+     top: 0;
+     z-index: 100;
+ }
+
+ header h1 {
+     margin: 0;
+     padding: 0;
+     border: none;
+     text-align: left;
+ }
+
+ .dashboard-layout {
+     display: flex;
+     flex: 1;
+     overflow: hidden;
+     gap: 20px;
+     padding: 20px;
+ }
+
+ .panel {
+     border-radius: var(--border-radius);
+     background-color: white;
+     box-shadow: var(--box-shadow);
+     padding: 15px;
+     overflow: auto;
+ }
+
+ .camera-panel {
+     flex: 3;
+     min-width: 0;
+ }
+
+ .control-panel {
+     flex: 2;
+     min-width: 300px;
+     display: flex;
+     flex-direction: column;
+     gap: 20px;
+ }
+
+ .section {
+     padding: 15px;
+     border-radius: var(--border-radius);
+     background-color: var(--light-color);
+     margin-bottom: 0;
+ }
+
+ .camera-feeds-container {
+     display: flex;
+     flex-direction: column;
+     gap: 20px;
+     overflow-y: auto;
+     max-height: calc(100vh - 150px);
+ }
+
+ .camera-feed {
+     margin-bottom: 0;
+ }
+
+ .camera-feed h3 {
+     margin-bottom: 10px;
+ }
+
+ .control-buttons {
+     display: flex;
+     gap: 10px;
+ }
+
+ /* Update existing styles */
+ .status {
+     margin: 0;
+     box-shadow: none;
+ }
+
+ .controls {
+     margin: 0;
+     display: block;
+ }
+
+ .rule-configuration {
+     margin: 0;
+     padding: 15px;
+     box-shadow: none;
+ }
+
+ .connection-status {
+     position: static;
+     display: flex;
+     align-items: center;
+ }
+
+ /* Responsive adjustments */
+ @media (max-width: 1024px) {
+     .dashboard-layout {
+         flex-direction: column;
+     }
+
+     .camera-panel,
+     .control-panel {
+         width: 100%;
+     }
+
+     .camera-feeds-container {
+         max-height: 50vh;
+     }
+ }
