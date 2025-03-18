@@ -66,10 +66,8 @@ function saveRules() {
         }));
         rules = updatedRules;
         console.log('Rules sent to server:', updatedRules);
-        alert('Rules saved successfully!');
     } else {
         console.error('WebSocket not connected, rules saved locally only');
-        alert('Rules saved locally. Server connection unavailable.');
     }
 }
 

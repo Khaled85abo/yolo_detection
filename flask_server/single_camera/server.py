@@ -179,12 +179,7 @@ class StreamServer:
         except Exception as e:
             print(f"Error emitting rules: {e}")
 
-    def update_rules(self, data):
-        """Handle rules from the client"""
-        print("update_rules received:", data)
-        if isinstance(data, dict):
-            self.rules = data
-            self.emit_rules()
+
             
     def send_to_all_clients(self, data):
         """Send data to all connected websocket clients"""
@@ -303,7 +298,6 @@ class StreamServer:
             'conveyor_stop': self.plank_status.conveyor_stop
         })
 
-
     def update_rules(self, rules_data = None):
         """Update the rules configuration"""
         if rules_data is None:
@@ -314,13 +308,14 @@ class StreamServer:
             if not isinstance(rules_data, dict):
                 print("Invalid rules data format")
                 return False
-                
+
             # Update the rules
-            for key in ['overlap', 'stop', 'incorrect']:
-                if key in rules_data and rules_data[key] in ['ignore', 'stop_conveyor', 'alert']:
+            for key in self.rules_data.keys():
+                if key in rules_data and rules_data[key] in self.rules_options:
                     self.rules[key] = rules_data[key]
             
             print(f"Rules updated: {self.rules}")
+            self.emit_rules()
             return True
         except Exception as e:
             print(f"Error updating rules: {e}")

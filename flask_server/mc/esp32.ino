@@ -293,7 +293,7 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
             // {
             //     handleStatusUpdate(doc["data"]);
             // }
-            else if (strcmp(event, "control_conveyor") == 0)
+            if (strcmp(event, "control_conveyor") == 0)
             {
                 handleConveyorControl(doc["data"]);
             }
@@ -388,37 +388,62 @@ void handleStatusUpdate(const JsonDocument &data)
 void handleRulesApplied(const JsonDocument &data)
 {
     Serial.println("Rules applied received:");
-    Serial.println("  Stop: " + String(data["stop_conveyor"]));
-    Serial.println("  Alert: " + String(data["alert"].size()));
-    Serial.println("  Ignore: " + String(data["ignore"].size()));
+    Serial.println("  Stop: " + String(data["stop_conveyor"].as<bool>()));
 
     // If stop_conveyor is true, stop the conveyor
-    if (data["stop_conveyor"])
+    if (data["stop_conveyor"].as<bool>())
+    {
         stopConveyor();
+    }
 
-    // Process alerts - check if specific conditions are in the alert array
-    JsonArray alertArray = data["alert"];
+    // Reset all LED states first
     plankStopLedActive = false;
     plankOverlapLedActive = false;
     plankIncorrectLedActive = false;
 
-    for (JsonVariant value : alertArray)
+    // Process alerts using a more compatible approach
+    if (data.containsKey("alert"))
     {
-        const char *alertType = value.as<const char *>();
-        if (strcmp(alertType, "stop") == 0)
+        // Check if alert is a string (single value)
+        if (data["alert"].is<const char *>())
         {
-            plankStopLedActive = true;
+            const char *alertType = data["alert"].as<const char *>();
+            processAlertType(alertType);
         }
-        else if (strcmp(alertType, "overlap") == 0)
+        // Otherwise, try to process it as an array
+        else
         {
-            plankOverlapLedActive = true;
-        }
-        else if (strcmp(alertType, "incorrect") == 0)
-        {
-            plankIncorrectLedActive = true;
+            // Print the raw JSON for debugging
+            Serial.print("Alert type: ");
+
+            // Try to access array elements directly by index
+            int i = 0;
+            while (data["alert"][i])
+            { // Check if element exists
+                const char *alertType = data["alert"][i].as<const char *>();
+                processAlertType(alertType);
+                i++;
+            }
         }
     }
+}
 
-    // Process ignores - we don't need to do anything here as we've already reset all LEDs
-    // and only set the ones that are in the alert array
+// Helper function to process alert types
+void processAlertType(const char *alertType)
+{
+    Serial.print("Processing alert: ");
+    Serial.println(alertType);
+
+    if (strcmp(alertType, "stop") == 0)
+    {
+        plankStopLedActive = true;
+    }
+    else if (strcmp(alertType, "overlap") == 0)
+    {
+        plankOverlapLedActive = true;
+    }
+    else if (strcmp(alertType, "incorrect") == 0)
+    {
+        plankIncorrectLedActive = true;
+    }
 }
