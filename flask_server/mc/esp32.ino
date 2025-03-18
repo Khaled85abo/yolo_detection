@@ -189,12 +189,20 @@ void loop()
         // Update LEDs based on their active state
         if (plankStopLedActive)
             digitalWrite(PLANK_STOP_LED, ledState ? HIGH : LOW);
+        else
+            digitalWrite(PLANK_STOP_LED, LOW);
         if (plankOverlapLedActive)
             digitalWrite(PLANK_OVERLAP_LED, ledState ? HIGH : LOW);
+        else
+            digitalWrite(PLANK_OVERLAP_LED, LOW);
         if (plankIncorrectLedActive)
             digitalWrite(PLANK_INCORRECT_LED, ledState ? HIGH : LOW);
+        else
+            digitalWrite(PLANK_INCORRECT_LED, LOW);
         if (conveyorStopLedActive)
             digitalWrite(CONVEYOR_STOP_LED, ledState ? HIGH : LOW);
+        else
+            digitalWrite(CONVEYOR_STOP_LED, LOW);
     }
     if (!connected)
     {

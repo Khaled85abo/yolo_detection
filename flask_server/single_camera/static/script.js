@@ -13,36 +13,12 @@ saveRulesButton.addEventListener('click', saveRules);
 // Initial connection and rule loading
 window.addEventListener('load', function () {
     connectWebSocket();
-    loadSavedRules();
 });
 
 // Rules configuration
-let rules = {
-    overlap: 'ignore',
-    stop: 'ignore',
-    incorrect: 'ignore'
-};
+let rules = {};
 
-// Load saved rules from localStorage if available
-function loadSavedRules() {
-    const savedRules = localStorage.getItem('plankDetectionRules');
-    if (savedRules) {
-        rules = JSON.parse(savedRules);
 
-        // Update the UI to reflect saved rules
-        document.getElementById('overlap-action').value = rules.overlap;
-        document.getElementById('stop-action').value = rules.stop;
-        document.getElementById('incorrect-action').value = rules.incorrect;
-
-        console.log('Loaded saved rules:', rules);
-    }
-}
-
-// Update rule in memory
-function updateRule(condition, action) {
-    rules[condition] = action;
-    console.log(`Rule updated: When ${condition} detected, ${action}`);
-}
 
 // Save rules to localStorage and send to server
 function saveRules() {
@@ -98,14 +74,6 @@ function connectWebSocket() {
         document.querySelector('.status-indicator').classList.add('status-connected');
         reconnectAttempts = 0;
 
-        // Send current rules to server on connection
-        if (Object.keys(rules).length > 0) {
-            socket.send(JSON.stringify({
-                event: 'update_rules',
-                data: rules
-            }));
-            console.log('Sent rules to server on connection');
-        }
     };
 
     socket.onmessage = function (event) {
