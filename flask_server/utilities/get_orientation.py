@@ -42,10 +42,10 @@ def get_plank_orientation(points, width, height):
 
     # For vertical planks (correct orientation), aspect ratio should be < 1
     if aspect_ratio < aspect_ratio_threshold:  # height is significantly larger than width
-        print("Orientation: correct")
+        # print("Orientation: correct")
         orientation = "correct"
     else:
-        print("Orientation: incorrect")
+        # print("Orientation: incorrect")
         orientation = "incorrect" 
 
     return orientation, angle, aspect_ratio
