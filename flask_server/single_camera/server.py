@@ -304,10 +304,11 @@ class StreamServer:
         # Emit the current status to all clients
         if status_changed:
             self.emit_status()
+            self.apply_rules_for_detections(active_detections)
         
         # Apply rules for all active detections at once
-        if active_detections:
-            self.apply_rules_for_detections(active_detections)
+        # if active_detections:
+        #     self.apply_rules_for_detections(active_detections)
     
     def apply_rules_for_detections(self, detection_types):
         """Apply rules for multiple detection types at once"""
