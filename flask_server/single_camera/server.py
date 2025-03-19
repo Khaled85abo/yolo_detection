@@ -264,31 +264,79 @@ class StreamServer:
     
     def update_status(self, overlapped=None, stopped=None, incorrect=None):
         """Update the status of planks"""
-        # print("Updating status:", overlapped, stopped, incorrect)
-
-        sorted_overlapped = sorted(overlapped) if overlapped is not None else None
-        sorted_stopped = sorted(stopped) if stopped is not None else None
-        sorted_incorrect = sorted(incorrect) if incorrect is not None else None
+        # Track which detection types need rule application
+        active_detections = []
         
-        # Only update, emit and apply rules if state has changed
-        if ((sorted_overlapped is not None and sorted_overlapped != self.plank_status.overlap) or 
-            (sorted_stopped is not None and sorted_stopped != self.plank_status.stop) or 
-            (sorted_incorrect is not None and sorted_incorrect != self.plank_status.incorrect)):
-            
-            print("Status changed")
-            print("previous status:", self.plank_status.overlap, self.plank_status.stop, self.plank_status.incorrect)
-            print("new status:", sorted_overlapped, sorted_stopped, sorted_incorrect)
-            
-            if sorted_overlapped is not None:
+        # Handle overlap detection
+        if overlapped is not None:
+            sorted_overlapped = sorted(overlapped)
+            if sorted_overlapped != self.plank_status.overlap:
+                print("Overlap status changed:", self.plank_status.overlap, "->", sorted_overlapped)
                 self.plank_status.overlap = sorted_overlapped
-            if sorted_stopped is not None:
+                # Only add to active detections if there's an active overlap
+                if len(sorted_overlapped) > 0:
+                    active_detections.append('overlap')
+        
+        # Handle stop detection
+        if stopped is not None:
+            sorted_stopped = sorted(stopped)
+            if sorted_stopped != self.plank_status.stop:
+                print("Stop status changed:", self.plank_status.stop, "->", sorted_stopped)
                 self.plank_status.stop = sorted_stopped
-            if sorted_incorrect is not None:
+                # Only add to active detections if there's an active stop
+                if len(sorted_stopped) > 0:
+                    active_detections.append('stop')
+        
+        # Handle incorrect detection
+        if incorrect is not None:
+            sorted_incorrect = sorted(incorrect)
+            if sorted_incorrect != self.plank_status.incorrect:
+                print("Incorrect status changed:", self.plank_status.incorrect, "->", sorted_incorrect)
                 self.plank_status.incorrect = sorted_incorrect
+                # Only add to active detections if there's an active incorrect
+                if len(sorted_incorrect) > 0:
+                    active_detections.append('incorrect')
+        
+        # Emit the current status to all clients
+        self.emit_status()
+        
+        # Apply rules for all active detections at once
+        if active_detections:
+            self.apply_rules_for_detections(active_detections)
+    
+    def apply_rules_for_detections(self, detection_types):
+        """Apply rules for multiple detection types at once"""
+        try:
+            # Initialize actions
+            actions_taken = {
+                "stop_conveyor": False,
+                "alert": [],
+                "ignore": []
+            }
+            
+            # Process each detection type
+            for detection_type in detection_types:
+                rule_action = self.rules[detection_type]
                 
-            self.emit_status()
-            # Apply rules after status update
-            self.apply_rules()
+                if rule_action == 'stop_conveyor' and not self.plank_status.conveyor_stop:
+                    actions_taken["stop_conveyor"] = True
+                    print(f"Rule applied: stopping conveyor due to {detection_type}")
+                elif rule_action == 'alert':
+                    actions_taken["alert"].append(detection_type)
+                    print(f"Rule applied: alert for {detection_type}")
+                elif rule_action == 'ignore':
+                    actions_taken["ignore"].append(detection_type)
+                    print(f"Rule applied: ignoring {detection_type}")
+            
+            # Only send notification if we're taking action
+            if actions_taken["stop_conveyor"] or actions_taken["alert"]:
+                self.send_to_all_clients({
+                    'event': 'rules_applied', 
+                    'data': actions_taken
+                })
+                
+        except Exception as e:
+            print(f"Error applying rules for detections {detection_types}: {e}")
 
     def get_status(self):
         """API endpoint to get current status"""
@@ -323,45 +371,6 @@ class StreamServer:
             print(f"Error updating rules: {e}")
             return False
             
-    def apply_rules(self):
-        """Apply the configured rules based on current status"""
-        try:
-            status = {
-                'overlap': len(self.plank_status.overlap) > 0,
-                'stop': len(self.plank_status.stop) > 0,
-                'incorrect': len(self.plank_status.incorrect) > 0
-            }
-            
-            # Check each condition and apply the configured action
-            # actions will be 
-            # {
-            #     "stop_conveyor": True | False,
-            #     "alert": ["incorrect", "overlap", "stop"],
-            #     "ignore": ["incorrect", "overlap", "stop"]
-            # }
-            actions_taken = { 
-                "stop_conveyor": False,
-                "alert": [],
-                "ignore": []
-            }
-            
-            for condition, is_active in status.items():
-                if is_active and self.rules[condition] == 'stop_conveyor' and not self.plank_status.conveyor_stop:
-                    actions_taken["stop_conveyor"] = True
-                elif is_active and self.rules[condition] == 'alert':
-                    actions_taken["alert"].append(condition)
-                elif is_active and self.rules[condition] == 'ignore':
-                    actions_taken["ignore"].append(condition)
-            
-            if len(actions_taken.keys()) > 0:
-                print(f"Rules applied: {', '.join(actions_taken)}")
-                self.send_to_all_clients({
-                        'event': 'rules_applied', 
-                        'data': actions_taken
-                    })
-        except Exception as e:
-            print(f"Error applying rules: {e}")
-            return False
 
     def index(self):
         """Render the template-based index page"""
