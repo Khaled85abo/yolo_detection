@@ -335,11 +335,15 @@ class StreamServer:
                     print(f"Rule applied: ignoring {detection_type}")
             
             # Only send notification if we're taking action
-            if actions_taken["stop_conveyor"] or actions_taken["alert"]:
-                self.send_to_all_clients({
-                    'event': 'rules_applied', 
-                    'data': actions_taken
-                })
+            # if actions_taken["stop_conveyor"] or actions_taken["alert"]:
+            #     self.send_to_all_clients({
+            #         'event': 'rules_applied', 
+            #         'data': actions_taken
+            #     })
+            self.send_to_all_clients({
+                'event': 'rules_applied', 
+                'data': actions_taken
+            })
                 
         except Exception as e:
             print(f"Error applying rules for detections {detection_types}: {e}")
