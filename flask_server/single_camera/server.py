@@ -266,6 +266,7 @@ class StreamServer:
         """Update the status of planks"""
         # Track which detection types need rule application
         active_detections = []
+        status_changed = False
         
         # Handle overlap detection
         if overlapped is not None:
@@ -273,6 +274,7 @@ class StreamServer:
             if sorted_overlapped != self.plank_status.overlap:
                 print("Overlap status changed:", self.plank_status.overlap, "->", sorted_overlapped)
                 self.plank_status.overlap = sorted_overlapped
+                status_changed = True
                 # Only add to active detections if there's an active overlap
                 if len(sorted_overlapped) > 0:
                     active_detections.append('overlap')
@@ -283,6 +285,7 @@ class StreamServer:
             if sorted_stopped != self.plank_status.stop:
                 print("Stop status changed:", self.plank_status.stop, "->", sorted_stopped)
                 self.plank_status.stop = sorted_stopped
+                status_changed = True
                 # Only add to active detections if there's an active stop
                 if len(sorted_stopped) > 0:
                     active_detections.append('stop')
@@ -293,12 +296,14 @@ class StreamServer:
             if sorted_incorrect != self.plank_status.incorrect:
                 print("Incorrect status changed:", self.plank_status.incorrect, "->", sorted_incorrect)
                 self.plank_status.incorrect = sorted_incorrect
+                status_changed = True
                 # Only add to active detections if there's an active incorrect
                 if len(sorted_incorrect) > 0:
                     active_detections.append('incorrect')
         
         # Emit the current status to all clients
-        self.emit_status()
+        if status_changed:
+            self.emit_status()
         
         # Apply rules for all active detections at once
         if active_detections:
