@@ -53,7 +53,9 @@ def process_frame(frame, model, tracker, server):
     yolo_start = time.time()
 
     # the trained model only detects the plank class
-    results = model(frame, conf=0.5)[0]
+    # results = model(frame, conf=0.5,)[0]
+    # with verbose=False, the model will not print the detection results
+    results = model(frame, conf=0.5,verbose=False)[0]
 
     # but if the model is trained on multiple classes, you can specify the class
     # results = model(frame, conf=0.5, classes=[0])[0]
