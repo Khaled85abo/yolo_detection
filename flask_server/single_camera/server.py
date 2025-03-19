@@ -264,7 +264,7 @@ class StreamServer:
     
     def update_status(self, overlapped=None, stopped=None, incorrect=None):
         """Update the status of planks"""
-        print("Updating status:", overlapped, stopped, incorrect)
+        # print("Updating status:", overlapped, stopped, incorrect)
 
         sorted_overlapped = sorted(overlapped) if overlapped is not None else None
         sorted_stopped = sorted(stopped) if stopped is not None else None
@@ -275,7 +275,9 @@ class StreamServer:
             (sorted_stopped is not None and sorted_stopped != self.plank_status.stop) or 
             (sorted_incorrect is not None and sorted_incorrect != self.plank_status.incorrect)):
             
-            print("State changed, emitting status update")
+            print("Status changed")
+            print("previous status:", self.plank_status.overlap, self.plank_status.stop, self.plank_status.incorrect)
+            print("new status:", sorted_overlapped, sorted_stopped, sorted_incorrect)
             
             if sorted_overlapped is not None:
                 self.plank_status.overlap = sorted_overlapped

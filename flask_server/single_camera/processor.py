@@ -97,7 +97,7 @@ def main():
         frame_count = 0
         while True:
             frame_count += 1
-            print(f"\n--- Frame {frame_count} ---")
+            # print(f"\n--- Frame {frame_count} ---")
             
             loop_start = time.time()
             
@@ -122,7 +122,7 @@ def main():
             
             # Print summary
             objects_in_roi = len(tracked_objects)
-            print(f"Summary: {objects_in_roi} tracked objects")
+            # print(f"Summary: {objects_in_roi} tracked objects")
             
             # Draw results
             draw_start = time.time()
@@ -138,13 +138,13 @@ def main():
             
             loop_end = time.time()
             
-            print(
-                f"[main loop] Frame {frame_count} total: {(loop_end - loop_start):.3f}s | "
-                f"capture: {(capture_end - capture_start):.3f}s | "
-                f"process_frame: {(process_end - process_start):.3f}s | "
-                f"draw: {(draw_end - draw_start):.3f}s | "
-                f"write: {(out_write_end - out_write_start):.3f}s"
-            )
+            # print(
+            #     f"[main loop] Frame {frame_count} total: {(loop_end - loop_start):.3f}s | "
+            #     f"capture: {(capture_end - capture_start):.3f}s | "
+            #     f"process_frame: {(process_end - process_start):.3f}s | "
+            #     f"draw: {(draw_end - draw_start):.3f}s | "
+            #     f"write: {(out_write_end - out_write_start):.3f}s"
+            # )
 
     except KeyboardInterrupt:
         print("\nStopping capture...")

@@ -47,7 +47,7 @@ def process_frame(frame, model, tracker, server):
     process_start = time.time()
 
     height, width = frame.shape[:2]
-    print(f"YOLO input shape: {width}x{height}")
+    # print(f"YOLO input shape: {width}x{height}")
     
     # YOLO detection on ROI frame
     yolo_start = time.time()
@@ -59,7 +59,7 @@ def process_frame(frame, model, tracker, server):
     # results = model(frame, conf=0.5, classes=[0])[0]
     yolo_end = time.time()
 
-    print(f"\nDetected objects: {len(results.boxes)}")
+    # print(f"\nDetected objects: {len(results.boxes)}")
 
     # Parse detections
     parse_start = time.time()
@@ -119,9 +119,9 @@ def process_frame(frame, model, tracker, server):
             is_overlapped, percent1, percent2 = check_overlap_from_boxes(ltrb1, ltrb2)
             if is_overlapped:
                 overlapped_pairs.append((track1.track_id, track2.track_id))
-                print(f"Warning: Overlap detected between planks {track1.track_id} and {track2.track_id}")
-                print(f"Overlap percentage: {percent1:.1f}% of plank {track1.track_id}, "
-                      f"{percent2:.1f}% of plank {track2.track_id}")
+                # print(f"Warning: Overlap detected between planks {track1.track_id} and {track2.track_id}")
+                # print(f"Overlap percentage: {percent1:.1f}% of plank {track1.track_id}, "
+                #       f"{percent2:.1f}% of plank {track2.track_id}")
 
     # Continue with existing orientation processing
     for track in tracked_objects:
@@ -171,11 +171,11 @@ def process_frame(frame, model, tracker, server):
                 stop_memory["stop_frames"] += 1
                 if stop_memory["stop_frames"] >= STOP_THRESHOLD_FRAMES:
                     stop_memory["is_stopped"] = True
-                    print(f"Plank {track_id} has stopped in orientation: {orientation}")
+                    # print(f"Plank {track_id} has stopped in orientation: {orientation}")
             else:
                 stop_memory["stop_frames"] = 0
                 stop_memory["is_stopped"] = False
-                print(f"Plank {track_id} has started moving again")
+                # print(f"Plank {track_id} has started moving again")
 
         memory = orientation_memory[track_id]
         final_orientations.append((
@@ -204,13 +204,13 @@ def process_frame(frame, model, tracker, server):
     orient_time = orient_end - orient_start
     total_time = process_end - process_start
     
-    print(
-        f"[process_frame] Total: {total_time:.3f}s | "
-        f"YOLO: {yolo_time:.3f}s | "
-        f"Parse: {parse_time:.3f}s | "
-        f"Track: {track_time:.3f}s | "
-        f"Orientation: {orient_time:.3f}s"
-    )
+    # print(
+    #     f"[process_frame] Total: {total_time:.3f}s | "
+    #     f"YOLO: {yolo_time:.3f}s | "
+    #     f"Parse: {parse_time:.3f}s | "
+    #     f"Track: {track_time:.3f}s | "
+    #     f"Orientation: {orient_time:.3f}s"
+    # )
 
     # Update server with current status - now using pre-calculated overlapped_pairs
     server.update_status(
