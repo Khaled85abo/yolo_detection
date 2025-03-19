@@ -232,6 +232,7 @@ void startConveyor()
     digitalWrite(CONVEYOR_START_LED_2, LOW);
     conveyorStopLedActive = false;
     digitalWrite(CONVEYOR_STOP_LED, LOW);
+    updateConveyorStatus();
 }
 
 void stopConveyor()
@@ -240,6 +241,7 @@ void stopConveyor()
     digitalWrite(CONVEYOR_START_LED_2, LOW);
     conveyorStopLedActive = true;
     digitalWrite(CONVEYOR_STOP_LED, HIGH);
+    updateConveyorStatus();
 }
 
 // Keep the API endpoint handler separate
@@ -349,8 +351,6 @@ void handleConveyorControl(const JsonDocument &data)
             stopConveyor();
         else
             startConveyor();
-
-        updateConveyorStatus();
     }
 }
 
