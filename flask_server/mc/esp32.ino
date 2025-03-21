@@ -6,8 +6,6 @@
 #include <ArduinoJson.h>
 
 // esp32 ip address: http://192.168.1.202/
-// Flask server IP address
-const char *flask_server_ip = "http://192.168.1.249:5000/api/status";
 
 // Replace with your network credentials
 const char *ssid = "TN-JE3155";
@@ -53,15 +51,17 @@ struct Timing
     const unsigned long BLINK_INTERVAL = 250; // WebSocket ping interval
 } timing;
 
+struct Server_config
+{
+    const char *server_ip = "192.168.1.249";
+    const int port = 5000;      // Flask's port
+    const char *ws_url = "/ws"; // WebSocket endpoint
+} server_config;
+
 WebServer server(80);
 
 // Replace SocketIOclient with WebSocketsClient
 WebSocketsClient webSocket;
-
-// Update Flask server details
-const char *ws_server = "192.168.1.249";
-const int ws_port = 5000;   // Flask's port
-const char *ws_url = "/ws"; // New WebSocket endpoint
 
 // HTML content as a string constant
 const char index_html[] PROGMEM = R"rawliteral(
@@ -196,7 +196,7 @@ void connectToWiFi()
 
 void setupWebSocket()
 {
-    webSocket.begin(ws_server, ws_port, ws_url);
+    webSocket.begin(server_config.server_ip, server_config.port, server_config.ws_url);
     webSocket.onEvent(webSocketEvent);
     webSocket.setReconnectInterval(5000);
     webSocket.enableHeartbeat(15000, 3000, 2);
