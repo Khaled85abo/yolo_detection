@@ -1,0 +1,44 @@
+version: '3'
+
+services:
+  main-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms: 
+      - linux/amd64
+      - linux/arm64/v8
+    ports:
+      - "5000:5000"
+    volumes:
+      - video-storage:/app/videos_output
+    restart: unless-stopped
+    environment:
+      - PYTHONUNBUFFERED=1
+    depends_on:
+      - picamera-stream
+    networks:
+      - camera-network
+
+  picamera-stream:
+    build:
+      context: .
+      dockerfile: Dockerfile.picamera
+      platforms: 
+      - linux/amd64
+      - linux/arm64/v8
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    privileged: true  # Required for camera access
+    devices:
+      - "/dev/video0:/dev/video0"  # Map camera device
+    networks:
+      - camera-network
+
+networks:
+  camera-network:
+    driver: bridge
+
+volumes:
+  video-storage:

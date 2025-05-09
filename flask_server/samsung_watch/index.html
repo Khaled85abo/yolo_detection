@@ -4,484 +4,57 @@
 <head>
     <title>Plank Detection</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <style>
-        body {
-            font-family: sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #000;
-            color: #fff;
-            font-size: 14px;
-            width: 100%;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        .container {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            max-width: 360px;
-            /* Typical Samsung watch width */
-            margin: 0 auto;
-        }
-
-        h1 {
-            font-size: 16px;
-            text-align: center;
-            margin: 5px 0;
-        }
-
-        /* Camera slider styles */
-        .camera-slider {
-            width: 100%;
-            height: 120px;
-            position: relative;
-            overflow: hidden;
-            background-color: #333;
-        }
-
-        .camera-slider-container {
-            display: flex;
-            transition: transform 0.3s ease;
-            height: 100%;
-            width: 100%;
-        }
-
-        .camera-feed {
-            min-width: 100%;
-            height: 100%;
-            flex-shrink: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-        }
-
-        .camera-feed img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: cover;
-        }
-
-        .camera-indicator {
-            position: absolute;
-            bottom: 5px;
-            left: 0;
-            right: 0;
-            display: flex;
-            justify-content: center;
-            z-index: 10;
-        }
-
-        .camera-dot {
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background-color: rgba(255, 255, 255, 0.5);
-            margin: 0 3px;
-        }
-
-        .camera-dot.active {
-            background-color: white;
-        }
-
-        .camera-label {
-            position: absolute;
-            top: 5px;
-            left: 5px;
-            background-color: rgba(0, 0, 0, 0.5);
-            padding: 2px 5px;
-            border-radius: 3px;
-            font-size: 10px;
-        }
-
-        .status {
-            padding: 5px;
-            margin: 5px 0;
-            border: 1px solid #444;
-            border-radius: 5px;
-            background-color: #222;
-            font-size: 12px;
-        }
-
-        .status p {
-            margin: 3px 0;
-        }
-
-        .controls {
-            display: flex;
-            justify-content: space-around;
-            margin: 5px 0;
-        }
-
-        button {
-            padding: 12px;
-            border-radius: 50%;
-            border: none;
-            font-weight: bold;
-            font-size: 12px;
-            width: 60px;
-            height: 60px;
-            touch-action: manipulation;
-        }
-
-        .stop-btn {
-            background-color: #ff4444;
-            color: white;
-        }
-
-        .start-btn {
-            background-color: #44ff44;
-            color: black;
-        }
-
-        .warning {
-            color: #ff4444;
-            font-weight: bold;
-            text-align: center;
-            margin: 5px 0;
-        }
-
-        .inactive {
-            display: none;
-        }
-
-        #connection-status {
-            position: fixed;
-            top: 2px;
-            right: 2px;
-            font-size: 10px;
-            background-color: rgba(0, 0, 0, 0.5);
-            padding: 2px;
-            border-radius: 3px;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='watch-styles.css') }}">
+    <script src="{{ url_for('static', filename='watch-script.js') }}" defer></script>
 </head>
 
 <body>
-    <div class="container">
-        <h1>Plank Detection</h1>
-
-        <!-- Camera Feed Slider -->
-        <div class="camera-slider">
-            <div class="camera-slider-container" id="camera-slider-container">
-                <!-- Camera feeds will be added here dynamically -->
+    <div class="watch-container">
+        <!-- Status Screen -->
+        <div class="screen" id="status-screen">
+            <div class="screen-title">System Status</div>
+            <div id="status">
+                <p>Loading...</p>
             </div>
-            <div class="camera-indicator" id="camera-indicator">
-                <!-- Dots will be added here dynamically -->
+            <div class="connection-status">
+                <span class="status-indicator status-initializing"></span>
+                <span id="connection-status">Connecting...</span>
+            </div>
+            <div class="nav-dots">
+                <span class="dot active"></span>
+                <span class="dot"></span>
+                <span class="dot"></span>
             </div>
         </div>
 
-        <div class="status" id="status">
-            Loading...
+        <!-- Controls Screen -->
+        <div class="screen" id="controls-screen">
+            <div class="screen-title">Controls</div>
+            <div class="controls">
+                <button class="btn-stop" onclick="controlConveyor(true)">STOP</button>
+                <button class="btn-start" onclick="controlConveyor(false)">START</button>
+            </div>
+            <div class="nav-dots">
+                <span class="dot"></span>
+                <span class="dot active"></span>
+                <span class="dot"></span>
+            </div>
         </div>
 
-        <div class="controls">
-            <button class="stop-btn" onclick="controlConveyor(true)">STOP</button>
-            <button class="start-btn" onclick="controlConveyor(false)">START</button>
-        </div>
-
-        <div id="warnings">
-            <div id="stopped" class="warning inactive">
-                <p>⚠️ Stopped Plank</p>
-                <button onclick="acknowledge('stopped')">OK</button>
+        <!-- Rules Screen -->
+        <div class="screen" id="rules-screen">
+            <div class="screen-title">Rules</div>
+            <div class="rule-container">
+                <!-- Rules will be populated by JavaScript -->
+            </div>
+            <button class="btn-save-rules">Save</button>
+            <div class="nav-dots">
+                <span class="dot"></span>
+                <span class="dot"></span>
+                <span class="dot active"></span>
             </div>
         </div>
     </div>
-
-    <span id="connection-status">Initializing...</span>
-
-    <script>
-        // Camera slider functionality
-        let currentCamera = 0;
-        let cameraCount = 0;
-        let touchStartX = 0;
-        let touchEndX = 0;
-        const sliderContainer = document.getElementById('camera-slider-container');
-        const indicatorContainer = document.getElementById('camera-indicator');
-
-        // Initialize camera feeds (we'll fetch the available cameras from the server)
-        function initCameraFeeds() {
-            // Fetch available cameras from the server
-            fetch('/api/cameras')
-                .then(response => response.json())
-                .then(data => {
-                    const cameraIds = data.camera_ids || [0, 1]; // Default to cameras 0 and 1 if not provided
-                    cameraCount = cameraIds.length;
-
-                    // Create camera feeds
-                    sliderContainer.innerHTML = '';
-                    indicatorContainer.innerHTML = '';
-
-                    cameraIds.forEach((cameraId, index) => {
-                        // Add camera feed
-                        const cameraFeed = document.createElement('div');
-                        cameraFeed.className = 'camera-feed';
-                        cameraFeed.innerHTML = `
-                            <div class="camera-label">Camera ${cameraId}</div>
-                            <img src="/video_feed/${cameraId}" alt="Camera ${cameraId}" />
-                        `;
-                        sliderContainer.appendChild(cameraFeed);
-
-                        // Add indicator dot
-                        const dot = document.createElement('div');
-                        dot.className = index === 0 ? 'camera-dot active' : 'camera-dot';
-                        dot.dataset.index = index;
-                        dot.addEventListener('click', () => {
-                            goToCamera(index);
-                        });
-                        indicatorContainer.appendChild(dot);
-                    });
-                })
-                .catch(err => {
-                    console.error('Error fetching cameras:', err);
-                    // Fallback to default cameras
-                    const defaultCameras = [0, 1];
-                    cameraCount = defaultCameras.length;
-
-                    sliderContainer.innerHTML = '';
-                    indicatorContainer.innerHTML = '';
-
-                    defaultCameras.forEach((cameraId, index) => {
-                        // Add camera feed
-                        const cameraFeed = document.createElement('div');
-                        cameraFeed.className = 'camera-feed';
-                        cameraFeed.innerHTML = `
-                            <div class="camera-label">Camera ${cameraId}</div>
-                            <img src="/video_feed/${cameraId}" alt="Camera ${cameraId}" />
-                        `;
-                        sliderContainer.appendChild(cameraFeed);
-
-                        // Add indicator dot
-                        const dot = document.createElement('div');
-                        dot.className = index === 0 ? 'camera-dot active' : 'camera-dot';
-                        dot.dataset.index = index;
-                        dot.addEventListener('click', () => {
-                            goToCamera(index);
-                        });
-                        indicatorContainer.appendChild(dot);
-                    });
-                });
-        }
-
-        // Go to specific camera
-        function goToCamera(index) {
-            if (index < 0 || index >= cameraCount) return;
-
-            currentCamera = index;
-            sliderContainer.style.transform = `translateX(-${currentCamera * 100}%)`;
-
-            // Update indicator dots
-            const dots = document.querySelectorAll('.camera-dot');
-            dots.forEach((dot, i) => {
-                dot.className = i === currentCamera ? 'camera-dot active' : 'camera-dot';
-            });
-
-            // Provide haptic feedback if available
-            if (navigator.vibrate) {
-                navigator.vibrate(50);
-            }
-        }
-
-        // Next camera
-        function nextCamera() {
-            goToCamera((currentCamera + 1) % cameraCount);
-        }
-
-        // Previous camera
-        function prevCamera() {
-            goToCamera((currentCamera - 1 + cameraCount) % cameraCount);
-        }
-
-        // Touch event handlers for slider
-        document.addEventListener('DOMContentLoaded', () => {
-            const slider = document.querySelector('.camera-slider');
-
-            slider.addEventListener('touchstart', (e) => {
-                touchStartX = e.changedTouches[0].screenX;
-            }, { passive: true });
-
-            slider.addEventListener('touchend', (e) => {
-                touchEndX = e.changedTouches[0].screenX;
-                handleSwipe();
-            }, { passive: true });
-        });
-
-        function handleSwipe() {
-            const threshold = 50; // Minimum distance for swipe
-            if (touchEndX < touchStartX - threshold) {
-                // Swipe left
-                nextCamera();
-            } else if (touchEndX > touchStartX + threshold) {
-                // Swipe right
-                prevCamera();
-            }
-        }
-
-        // WebSocket connection
-        let socket;
-        let connectionStatus = 'disconnected';
-        let reconnectAttempts = 0;
-        const maxReconnectAttempts = 10;
-        const reconnectDelay = 1000;
-
-        function connectWebSocket() {
-            // Create WebSocket connection
-            const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-            const wsUrl = protocol + window.location.host + '/ws';
-
-            console.log('Connecting to WebSocket at:', wsUrl);
-
-            // Close existing socket if it exists
-            if (socket) {
-                try {
-                    socket.close();
-                } catch (e) {
-                    console.error("Error closing existing socket:", e);
-                }
-            }
-
-            socket = new WebSocket(wsUrl);
-
-            socket.onopen = function () {
-                console.log('Connected to server websocket');
-                connectionStatus = 'connected';
-                document.getElementById('connection-status').textContent = '●';
-                document.getElementById('connection-status').style.color = '#44ff44';
-                reconnectAttempts = 0;
-            };
-
-            socket.onmessage = function (event) {
-                try {
-                    const data = JSON.parse(event.data);
-
-                    // Handle different event types
-                    if (data.event === 'status_update') {
-                        updateStatusDisplay(data.data);
-                    }
-                    // Add more event handlers as needed
-                } catch (error) {
-                    console.error('Error parsing message:', error);
-                }
-            };
-
-            socket.onerror = function (error) {
-                console.error('WebSocket error:', error);
-                document.getElementById('connection-status').textContent = '✕';
-                document.getElementById('connection-status').style.color = '#ff4444';
-
-                // Try to reconnect immediately on error
-                if (connectionStatus === 'connected') {
-                    setTimeout(connectWebSocket, 1000);
-                }
-            };
-
-            socket.onclose = function (event) {
-                console.log('Disconnected from server websocket');
-                connectionStatus = 'disconnected';
-                document.getElementById('connection-status').textContent = '○';
-                document.getElementById('connection-status').style.color = '#ffff44';
-
-                // Handle reconnection
-                if (reconnectAttempts < maxReconnectAttempts) {
-                    reconnectAttempts++;
-                    const delay = reconnectDelay * Math.min(reconnectAttempts, 5);
-                    setTimeout(connectWebSocket, delay);
-                } else {
-                    document.getElementById('connection-status').textContent = '!';
-                }
-            };
-        }
-
-        // Initial connection
-        window.addEventListener('load', () => {
-            connectWebSocket();
-            initCameraFeeds();
-        });
-
-        // Add a ping function to keep the connection alive
-        setInterval(function () {
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                try {
-                    socket.send(JSON.stringify({ event: 'ping', data: {} }));
-                } catch (e) {
-                    console.error('Error sending ping:', e);
-                }
-            }
-        }, 30000); // Send ping every 30 seconds
-
-        function updateStatus() {
-            fetch('/api/status')
-                .then(response => response.json())
-                .then(data => updateStatusDisplay(data))
-                .catch(err => console.error('Error fetching status:', err));
-        }
-
-        function updateStatusDisplay(data) {
-            document.getElementById('status').innerHTML = `
-                <p>Conveyor: <strong>${data.conveyor_stop ? '⛔ STOPPED' : '✅ RUNNING'}</strong></p>
-                <p>Overlapped: <strong>${data.overlap ? '⚠️ YES' : '✅ NO'}</strong></p>
-                <p>Stopped: <strong>${data.stop ? '⚠️ YES' : '✅ NO'}</strong></p>
-                <p>Incorrect: <strong>${data.incorrect ? '⚠️ YES' : '✅ NO'}</strong></p>
-            `;
-
-            // Show warnings if needed
-            if (data.stop) {
-                document.getElementById('stopped').classList.remove('inactive');
-            } else {
-                document.getElementById('stopped').classList.add('inactive');
-            }
-        }
-
-        window.controlConveyor = function (state) {
-            // Using WebSocket to control conveyor when connected
-            if (socket && socket.readyState === WebSocket.OPEN) {
-                const message = JSON.stringify({
-                    event: 'control_conveyor',
-                    data: { state: state }
-                });
-                socket.send(message);
-
-                // Provide haptic feedback if available
-                if (navigator.vibrate) {
-                    navigator.vibrate(100);
-                }
-            } else {
-                // Fallback to HTTP API if WebSocket is not connected
-                fetch('/api/control_conveyor', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ state: state })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        updateStatus();
-
-                        // Provide haptic feedback if available
-                        if (navigator.vibrate) {
-                            navigator.vibrate(100);
-                        }
-                    })
-                    .catch(err => console.error('Error controlling conveyor:', err));
-            }
-        };
-
-        window.acknowledge = function (warningType) {
-            document.getElementById(warningType).classList.add('inactive');
-
-            // Provide haptic feedback if available
-            if (navigator.vibrate) {
-                navigator.vibrate(100);
-            }
-        };
-
-        // Fallback status updates
-        updateStatus();
-        setInterval(updateStatus, 5000);
-    </script>
 </body>
 
 </html>

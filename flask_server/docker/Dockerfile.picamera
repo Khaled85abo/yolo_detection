@@ -1,0 +1,25 @@
+FROM python:3.9-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install picamera2 and other dependencies
+RUN pip install --no-cache-dir \
+    flask \
+    numpy \
+    opencv-python-headless \
+    picamera2
+
+# Copy only the Pi camera streaming script
+COPY pi_stream_server.py .
+
+# Expose port
+EXPOSE 8000
+
+# Run the Pi camera stream server
+CMD ["python", "pi_stream_server.py", "--port", "8000"]

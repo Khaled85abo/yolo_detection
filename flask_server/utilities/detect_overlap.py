@@ -1,6 +1,6 @@
 # OVERLAP_THRESHOLD = 0.20
 
-def _check_overlap_from_boxes(ltrb1, ltrb2):
+def check_overlap_from_boxes(ltrb1, ltrb2):
     """
     Determines if two bounding boxes overlap and calculates the percentage of overlap.
     

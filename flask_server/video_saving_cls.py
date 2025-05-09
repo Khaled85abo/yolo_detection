@@ -16,13 +16,14 @@ class OutputVideo:
                 cls._instance._initialized = False
             return cls._instance
     
-    def __init__(self,  fps=10, frame_width=640, frame_height=480):
+    def __init__(self, fps=10, frame_width=640, frame_height=480, bitrate=None):
         with self._lock:
             # Skip initialization if already done
             if not self._initialized:
                 self.fps = fps
                 self.frame_width = frame_width
                 self.frame_height = frame_height
+                self.bitrate = bitrate
                 self.video_writers = {}
                 
                 # Create base directory if it doesn't exist
@@ -63,12 +64,16 @@ class OutputVideo:
             try:
                 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
                 writer = cv2.VideoWriter(
-                output_path, 
-                fourcc, 
-                self.fps, 
-                (self.frame_width, self.frame_height)
-            )
-            
+                    output_path, 
+                    fourcc, 
+                    self.fps, 
+                    (self.frame_width, self.frame_height)
+                )
+                
+                # Set bitrate if specified
+                if self.bitrate is not None and hasattr(writer, 'set'):
+                    writer.set(cv2.VIDEOWRITER_PROP_QUALITY, self.bitrate)
+                
                 if writer.isOpened():
                     writer_key = f"{name}{suffix}"
                     self.video_writers[writer_key] = {

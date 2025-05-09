@@ -3,13 +3,19 @@
 # eventlet.monkey_patch()
 
 
+import sys
+import os
+# Add the parent directory to the path so we can import utilities
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+
 from ultralytics import YOLO
 from picamera2 import Picamera2
 import time
 
 from utilities.process_frame import process_frame
 from utilities.draw_boxes import draw_boxes_and_orientations
-from utilities.detect_stop import tracker
+from utilities.detect_stop import create_tracker
 #   
 frame_width = 640
 frame_height = 480
@@ -27,22 +33,27 @@ model = YOLO('/home/rise/enter/train_yolo11n/weights/best_yolo11n.pt')
 
 
 def main():
+    from utilities.get_roi_frame import get_roi_frame
     print("Initializing camera...")
     picam2 = Picamera2()
 
     print("Configuring camera settings...")
     
 
-
+    tracker = create_tracker()
 
     # Ensure ROI dimensions are even
-    roi_width = int(frame_width * (ROI_width_end - ROI_width_start))
-    roi_height = int(frame_height * (ROI_height_end - ROI_height_start))
-    if roi_width % 2 != 0:
-        roi_width += 1  # Make it even
-    if roi_height % 2 != 0:
-        roi_height += 1  # Make it even
+    # roi_width = int(frame_width * (ROI_width_end - ROI_width_start))
+    # roi_height = int(frame_height * (ROI_height_end - ROI_height_start))
+    # if roi_width % 2 != 0:
+    #     roi_width += 1  # Make it even
+    # if roi_height % 2 != 0:
+    #     roi_height += 1  # Make it even
     
+    # Get the ROI frame
+    roi_width, roi_height = get_roi_frame(frame_width, frame_height, {"width_start": ROI_width_start, "width_end": ROI_width_end, "height_start": ROI_height_start, "height_end": ROI_height_end})
+    
+
     print(f"Full dimensions: {frame_width}x{frame_height}")
     print(f"ROI dimensions: {roi_width}x{roi_height}")
     
@@ -59,7 +70,7 @@ def main():
 
     try:
         # Import StreamServer from your local server module
-        from server_websocket import StreamServer
+        from single_camera.server import StreamServer
         print("Starting stream server...")
         server = StreamServer()
         server.add_camera('camera1', frame_size=(roi_width, roi_height))
@@ -71,7 +82,7 @@ def main():
 
     # Initialize video output
     try:
-        from video_output_class import OutputVideo
+        from video_saving_cls import OutputVideo
         out_cls = OutputVideo( fps=custom_fps, frame_width=roi_width, frame_height=roi_height)
         out_cls.create_writer(name='camera1', subfolder='pi')
 
@@ -79,14 +90,14 @@ def main():
         print(f"Failed to initialize OutputVideo: {str(e)}")
         return
 
-
+    
 
     try:
         
         frame_count = 0
         while True:
             frame_count += 1
-            print(f"\n--- Frame {frame_count} ---")
+            # print(f"\n--- Frame {frame_count} ---")
             
             loop_start = time.time()
             
@@ -111,7 +122,7 @@ def main():
             
             # Print summary
             objects_in_roi = len(tracked_objects)
-            print(f"Summary: {objects_in_roi} tracked objects")
+            # print(f"Summary: {objects_in_roi} tracked objects")
             
             # Draw results
             draw_start = time.time()
@@ -127,13 +138,13 @@ def main():
             
             loop_end = time.time()
             
-            print(
-                f"[main loop] Frame {frame_count} total: {(loop_end - loop_start):.3f}s | "
-                f"capture: {(capture_end - capture_start):.3f}s | "
-                f"process_frame: {(process_end - process_start):.3f}s | "
-                f"draw: {(draw_end - draw_start):.3f}s | "
-                f"write: {(out_write_end - out_write_start):.3f}s"
-            )
+            # print(
+            #     f"[main loop] Frame {frame_count} total: {(loop_end - loop_start):.3f}s | "
+            #     f"capture: {(capture_end - capture_start):.3f}s | "
+            #     f"process_frame: {(process_end - process_start):.3f}s | "
+            #     f"draw: {(draw_end - draw_start):.3f}s | "
+            #     f"write: {(out_write_end - out_write_start):.3f}s"
+            # )
 
     except KeyboardInterrupt:
         print("\nStopping capture...")

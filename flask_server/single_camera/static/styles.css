@@ -1,0 +1,234 @@
+ :root {
+     --primary-color: #3498db;
+     --secondary-color: #2ecc71;
+     --danger-color: #e74c3c;
+     --warning-color: #f39c12;
+     --dark-color: #34495e;
+     --light-color: #ecf0f1;
+     --border-radius: 8px;
+     --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+ }
+
+ * {
+     margin: 0;
+     padding: 0;
+     box-sizing: border-box;
+ }
+
+ body {
+     font-family: 'Roboto', sans-serif;
+     line-height: 1.6;
+     color: #333;
+     background-color: #f5f7fa;
+     padding: 20px;
+ }
+
+ h1,
+ h2,
+ h3 {
+     color: var(--dark-color);
+     margin-bottom: 15px;
+ }
+
+ h1 {
+     text-align: center;
+     padding: 15px;
+     margin-bottom: 30px;
+     border-bottom: 2px solid var(--primary-color);
+ }
+
+ .container {
+     max-width: 1200px;
+     margin: 0 auto;
+ }
+
+ .camera-feed,
+ .info-section {
+     border-radius: var(--border-radius);
+     background-color: white;
+     box-shadow: var(--box-shadow);
+ }
+
+ .status-container {
+     padding: 20px;
+     border-radius: var(--border-radius);
+ }
+
+ #status {
+     margin-top: 10px;
+     display: flex;
+     flex-direction: column;
+     gap: 10px;
+ }
+
+
+ #status p {
+     padding: 10px;
+     border-radius: var(--border-radius);
+     background-color: var(--light-color);
+ }
+
+ .warning {
+     color: var(--danger-color);
+     font-weight: bold;
+ }
+
+ .controls {
+     display: flex;
+     justify-content: center;
+     gap: 15px;
+     margin: 25px 0;
+ }
+
+ button {
+     padding: 12px 20px;
+     border: none;
+     border-radius: var(--border-radius);
+     color: white;
+     font-weight: 500;
+     cursor: pointer;
+     transition: all 0.3s ease;
+     box-shadow: var(--box-shadow);
+ }
+
+ button:hover {
+     transform: translateY(-2px);
+     box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+ }
+
+ button:active {
+     transform: translateY(0);
+ }
+
+ .btn-stop {
+     background-color: var(--danger-color);
+ }
+
+ .btn-start {
+     background-color: var(--secondary-color);
+ }
+
+ .btn-save {
+     background-color: var(--primary-color);
+ }
+
+ .camera-feed {
+     text-align: center;
+ }
+
+ .camera-feed img {
+     border-radius: var(--border-radius);
+     box-shadow: var(--box-shadow);
+     max-width: 100%;
+     height: auto;
+ }
+
+ /* Rule configuration styles */
+ .rule-configuration {
+     padding: 20px;
+     border-radius: var(--border-radius);
+     /* background-color: white;
+     box-shadow: var(--box-shadow); */
+ }
+
+ .rule-container {
+     margin-top: 10px;
+     display: flex;
+     flex-direction: column;
+     gap: 10px;
+     margin-bottom: 20px;
+ }
+
+ .rule-item {
+     flex: 1;
+     min-width: 250px;
+     padding: 10px;
+     border-radius: var(--border-radius);
+     background-color: var(--light-color);
+     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+     transition: all 0.3s ease;
+ }
+
+ .rule-item:hover {
+     transform: translateY(-5px);
+     box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+ }
+
+ .rule-item h3 {
+     font-size: 16px;
+     margin-bottom: 10px;
+     color: var(--dark-color);
+ }
+
+ select {
+     width: 100%;
+     padding: 10px;
+     margin-top: 5px;
+     border-radius: 4px;
+     border: 1px solid #ddd;
+     background-color: white;
+     font-family: inherit;
+     font-size: 14px;
+ }
+
+ select:focus {
+     outline: none;
+     border-color: var(--primary-color);
+     box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+ }
+
+ /* Connection status */
+ .connection-status {
+     position: fixed;
+     top: 15px;
+     right: 15px;
+     background-color: white;
+     padding: 8px 15px;
+     border-radius: 20px;
+     box-shadow: var(--box-shadow);
+     font-size: 14px;
+     z-index: 1000;
+ }
+
+ .status-indicator {
+     display: inline-block;
+     width: 10px;
+     height: 10px;
+     border-radius: 50%;
+     margin-right: 5px;
+ }
+
+ .status-connected {
+     background-color: var(--secondary-color);
+ }
+
+ .status-disconnected {
+     background-color: var(--danger-color);
+ }
+
+ .status-initializing {
+     background-color: var(--warning-color);
+ }
+
+ .btn-save-rules {
+     background-color: var(--primary-color);
+ }
+
+ .controls {
+     flex-direction: column;
+     align-items: center;
+ }
+
+ .wrapper {
+     display: flex;
+     flex-wrap: wrap;
+     justify-content: center;
+     gap: 8px;
+ }
+
+ .status-rules {
+     justify-content: center;
+     display: flex;
+     flex-wrap: wrap;
+     gap: 8px;
+ }
