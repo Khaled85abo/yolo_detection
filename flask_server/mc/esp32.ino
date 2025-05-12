@@ -8,8 +8,8 @@
 // esp32 ip address: http://192.168.1.202/
 
 // Replace with your network credentials
-const char *ssid = "pi-rise";
-const char *password = "rise";
+const char *ssid = "Pi-rise"; // TN-JE3155 home network
+const char *password = "";
 
 // Constants and configuration
 #define VERSION "1.0.0"
@@ -53,10 +53,18 @@ struct Timing
 
 struct Server_config
 {
-    const char *server_ip = "10.42.0.1";
+    const char *server_ip = "10.42.0.1"; // 192.168.1.249 for the home network
     const int port = 5000;      // Flask's port
     const char *ws_url = "/ws"; // WebSocket endpoint
 } server_config;
+
+struct websocket_config
+{
+    const unsigned long reconnect_interval = 3000;
+    const unsigned long heartbeat_interval = 5000;
+    const unsigned long heartbeat_timeout = 1500;
+    const unsigned long heartbeat_count = 2;
+} websocket_config;
 
 WebServer server(80);
 
@@ -172,10 +180,17 @@ void connectToWiFi()
     Serial.print("Connecting to WiFi network: ");
     Serial.println(ssid);
 
+    // Reset WiFi connection first
+    WiFi.disconnect(true);
+    delay(1000);
+    WiFi.mode(WIFI_STA);
+    delay(500);
+    
     WiFi.begin(ssid, password);
 
     int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts < 20)
+    const int MAX_ATTEMPTS = 30; // More attempts with longer timeout
+    while (WiFi.status() != WL_CONNECTED && attempts < MAX_ATTEMPTS)
     {
         delay(500);
         Serial.print(".");
@@ -191,6 +206,8 @@ void connectToWiFi()
     else
     {
         Serial.println("\nFailed to connect to WiFi. Continuing anyway...");
+        Serial.print("WiFi status code: ");
+        Serial.println(WiFi.status());
     }
 }
 
@@ -198,8 +215,8 @@ void setupWebSocket()
 {
     webSocket.begin(server_config.server_ip, server_config.port, server_config.ws_url);
     webSocket.onEvent(webSocketEvent);
-    webSocket.setReconnectInterval(5000);
-    webSocket.enableHeartbeat(15000, 3000, 2);
+    webSocket.setReconnectInterval(websocket_config.reconnect_interval);
+    webSocket.enableHeartbeat(websocket_config.heartbeat_interval, websocket_config.heartbeat_timeout, websocket_config.heartbeat_count);
     Serial.println("WebSocket client initialized");
 }
 
@@ -218,6 +235,17 @@ void setupWebServer()
 
 void loop()
 {
+    // Check WiFi connection and try to reconnect if needed
+    if (WiFi.status() != WL_CONNECTED) {
+        unsigned long currentMillis = millis();
+        // Try to reconnect every 30 seconds
+        if (currentMillis - timing.lastReconnectAttempt > 30000) {
+            timing.lastReconnectAttempt = currentMillis;
+            Serial.println("WiFi disconnected. Attempting to reconnect...");
+            connectToWiFi();
+        }
+    }
+    
     webSocket.loop();
     server.handleClient();
 
