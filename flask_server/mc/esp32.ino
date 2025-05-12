@@ -8,8 +8,8 @@
 // esp32 ip address: http://192.168.1.202/
 
 // Replace with your network credentials
-const char *ssid = "TN-JE3155";
-const char *password = "";
+const char *ssid = "pi-rise";
+const char *password = "rise";
 
 // Constants and configuration
 #define VERSION "1.0.0"
@@ -53,7 +53,7 @@ struct Timing
 
 struct Server_config
 {
-    const char *server_ip = "192.168.1.249";
+    const char *server_ip = "10.42.0.1";
     const int port = 5000;      // Flask's port
     const char *ws_url = "/ws"; // WebSocket endpoint
 } server_config;
