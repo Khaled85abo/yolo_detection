@@ -44,7 +44,7 @@ const unsigned long STATION_CHECK_INTERVAL = 5000; // Check every 5 seconds
 WebSocketsClient webSocket;
 
 // Update Flask server details
-const char *ws_server = "192.168.4.100"; // on KAB network "192.168.171.131", on Pi-rise network "10.42.0.1"
+const char *ws_server = "http://10.42.0.1";
 bool connected = false;
 const int ws_port = 5000; // Flask's port 5000
 // Update to use standard WebSocket endpoint
@@ -62,7 +62,7 @@ bool ledState = false;
 uint8_t piMacAddress[] = {0x2C, 0xCF, 0x67, 0x4A, 0xF9, 0xDE}; // Replace with your Pi's actual MAC
 
 // The static IP you want to assign to the Pi
-IPAddress piStaticIP(192, 168, 4, 2);
+IPAddress piStaticIP(192, 168, 4, 100);
 
 // Address of ESP32 AP
 IPAddress apIP(192, 168, 4, 1);
@@ -156,29 +156,29 @@ void setup()
     Serial.begin(115200);
 
     // Connect to Wi-Fi
-    WiFi.mode(WIFI_AP_STA);
+    // WiFi.mode(WIFI_AP_STA);
 
-    // Start AP with limited configuration
-    WiFi.softAPConfig(apIP, apIP, netMask);
-    // Set maxConnection to 1 to only allow the Pi
-    WiFi.softAP(ap_ssid, ap_password, 1, 0, 1); // channel 1, hidden=false, max_connection=1
-    Serial.println("AP started with max 1 connection");
-    Serial.print("AP IP address: ");
-    Serial.println(WiFi.softAPIP());
+    // // Start AP with limited configuration
+    // WiFi.softAPConfig(apIP, apIP, netMask);
+    // // Set maxConnection to 1 to only allow the Pi
+    // WiFi.softAP(ap_ssid, ap_password, 1, 0, 1); // channel 1, hidden=false, max_connection=1
+    // Serial.println("AP started with max 1 connection");
+    // Serial.print("AP IP address: ");
+    // Serial.println(WiFi.softAPIP());
 
-    WiFi.onEvent(WiFiEvent);
+    // WiFi.onEvent(WiFiEvent);
 
 
     // Connect to Wi-Fi
-    // WiFi.begin(ssid, password);
-    // while (WiFi.status() != WL_CONNECTED)
-    // {
-    //     delay(1000);
-    //     Serial.println("Connecting to WiFi...");
-    // }
-    // Serial.println("Connected to WiFi");
-    // Serial.print("IP Address: ");
-    // Serial.println(WiFi.localIP());
+    WiFi.begin(ssid, password);
+    while (WiFi.status() != WL_CONNECTED)
+    {
+        delay(1000);
+        Serial.println("Connecting to WiFi...");
+    }
+    Serial.println("Connected to WiFi");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
 
     // Initialize WebSocket connection
     webSocket.begin(ws_server, ws_port, ws_url);
@@ -207,14 +207,14 @@ void setup()
     // directly supported in the same way with the newer ESP-IDF.
     // Instead, we'll log the Pi's MAC address when it connects
     
-    Serial.print("We'll be looking for Pi's MAC: ");
-    for (int i = 0; i < 6; i++) {
-        Serial.printf("%02X", piMacAddress[i]);
-        if (i < 5) Serial.print(":");
-    }
-    Serial.println();
-    Serial.print("Expected Pi IP: ");
-    Serial.println(piStaticIP.toString());
+    // Serial.print("We'll be looking for Pi's MAC: ");
+    // for (int i = 0; i < 6; i++) {
+    //     Serial.printf("%02X", piMacAddress[i]);
+    //     if (i < 5) Serial.print(":");
+    // }
+    // Serial.println();
+    // Serial.print("Expected Pi IP: ");
+    // Serial.println(piStaticIP.toString());
 
     server.begin();
 }
@@ -236,19 +236,19 @@ void loop()
     }
 
     // Check for connected stations periodically
-    if (currentMillis - lastStationCheckTime >= STATION_CHECK_INTERVAL) {
-        lastStationCheckTime = currentMillis;
-        piDetected = printConnectedStations();
+    // if (currentMillis - lastStationCheckTime >= STATION_CHECK_INTERVAL) {
+    //     lastStationCheckTime = currentMillis;
+    //     piDetected = printConnectedStations();
         
-        // If we detected the Pi but aren't connected, try its last known IP
-        if (piDetected && !connected && piActualIP != IPAddress(0,0,0,0)) {
-            Serial.printf("Attempting to reconnect to last known Pi IP: %s\n", 
-                         piActualIP.toString().c_str());
-            webSocket.disconnect();
-            delay(500);
-            webSocket.begin(piActualIP.toString().c_str(), ws_port, ws_url);
-        }
-    }
+    //     // If we detected the Pi but aren't connected, try its last known IP
+    //     if (piDetected && !connected && piActualIP != IPAddress(0,0,0,0)) {
+    //         Serial.printf("Attempting to reconnect to last known Pi IP: %s\n", 
+    //                      piActualIP.toString().c_str());
+    //         webSocket.disconnect();
+    //         delay(500);
+    //         webSocket.begin(piActualIP.toString().c_str(), ws_port, ws_url);
+    //     }
+    // }
 
     // Handle LED blinking
     if (currentMillis - lastBlinkTime >= BLINK_INTERVAL && connected)
@@ -280,150 +280,150 @@ void loop()
     }
 
     // Check for connected clients - simplified version
-    if(WiFi.softAPgetStationNum() > 0) {
-        // Get connected station count
-        Serial.print("Number of connected stations: ");
-        Serial.println(WiFi.softAPgetStationNum());
+    // if(WiFi.softAPgetStationNum() > 0) {
+    //     // Get connected station count
+    //     Serial.print("Number of connected stations: ");
+    //     Serial.println(WiFi.softAPgetStationNum());
         
-        // We can't easily get the detailed station info with the newer API
-        // in the Arduino framework, so we'll just check for our WebSocket connection
-    }
+    //     // We can't easily get the detailed station info with the newer API
+    //     // in the Arduino framework, so we'll just check for our WebSocket connection
+    // }
     
     // Check if we can connect to the Pi's WebSocket server
-    if (!client.connected()) {
-        Serial.println("Attempting to connect to Pi's WebSocket server...");
-        if (client.connect(piStaticIP, ws_port)) { // Use ws_port (5000) instead of webSocketPort
-            Serial.println("Connected to WebSocket server!");
-            // Here you would implement your WebSocket protocol
-        } else {
-            Serial.println("Connection to WebSocket server failed");
-            delay(5000); // Wait 5 seconds before retrying
-        }
-    }
+    // if (!client.connected()) {
+    //     Serial.println("Attempting to connect to Pi's WebSocket server...");
+    //     if (client.connect(piStaticIP, ws_port)) { // Use ws_port (5000) instead of webSocketPort
+    //         Serial.println("Connected to WebSocket server!");
+    //         // Here you would implement your WebSocket protocol
+    //     } else {
+    //         Serial.println("Connection to WebSocket server failed");
+    //         delay(5000); // Wait 5 seconds before retrying
+    //     }
+    // }
     
     // Handle WebSocket communication when connected
-    if (client.connected()) {
-        // Your WebSocket communication code here
-    }
+    // if (client.connected()) {
+    //     // Your WebSocket communication code here
+    // }
     
     delay(5000); // Check every 5 seconds
 }
 
-void WiFiEvent(WiFiEvent_t event) {
-    switch(event) {
-        case ARDUINO_EVENT_WIFI_AP_STACONNECTED:
-            Serial.println("New station connected to ESP32 AP!");
-            printConnectedStations();
-            break;
-        case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
-            Serial.println("Station disconnected from ESP32 AP!");
-            printConnectedStations();
-            break;
-        default:
-            break;
-    }
-}
+// void WiFiEvent(WiFiEvent_t event) {
+//     switch(event) {
+//         case ARDUINO_EVENT_WIFI_AP_STACONNECTED:
+//             Serial.println("New station connected to ESP32 AP!");
+//             printConnectedStations();
+//             break;
+//         case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
+//             Serial.println("Station disconnected from ESP32 AP!");
+//             printConnectedStations();
+//             break;
+//         default:
+//             break;
+//     }
+// }
 
 // Update the printConnectedStations function to scan a smaller IP range
-bool printConnectedStations() {
-    bool piFound = false;
-    int stationCount = WiFi.softAPgetStationNum();
-    if (stationCount == 0) {
-        Serial.println("No stations connected");
-        return false;
-    }
+// bool printConnectedStations() {
+//     bool piFound = false;
+//     int stationCount = WiFi.softAPgetStationNum();
+//     if (stationCount == 0) {
+//         Serial.println("No stations connected");
+//         return false;
+//     }
     
-    Serial.print("Number of connected stations: ");
-    Serial.println(stationCount);
+//     Serial.print("Number of connected stations: ");
+//     Serial.println(stationCount);
     
-    // Get the station list using the newer API
-    esp_err_t result = esp_wifi_ap_get_sta_list(&stationList);
+//     // Get the station list using the newer API
+//     esp_err_t result = esp_wifi_ap_get_sta_list(&stationList);
     
-    if (result != ESP_OK) {
-        Serial.println("Failed to get station list");
-        return false;
-    }
+//     if (result != ESP_OK) {
+//         Serial.println("Failed to get station list");
+//         return false;
+//     }
     
-    for (int i = 0; i < stationList.num; i++) {
-        wifi_sta_info_t station = stationList.sta[i];
+//     for (int i = 0; i < stationList.num; i++) {
+//         wifi_sta_info_t station = stationList.sta[i];
         
-        Serial.print("Station ");
-        Serial.print(i + 1);
-        Serial.print(" - MAC: ");
+//         Serial.print("Station ");
+//         Serial.print(i + 1);
+//         Serial.print(" - MAC: ");
         
-        char macStr[18] = {0};
-        sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X",
-                station.mac[0], station.mac[1], station.mac[2], 
-                station.mac[3], station.mac[4], station.mac[5]);
-        Serial.print(macStr);
+//         char macStr[18] = {0};
+//         sprintf(macStr, "%02X:%02X:%02X:%02X:%02X:%02X",
+//                 station.mac[0], station.mac[1], station.mac[2], 
+//                 station.mac[3], station.mac[4], station.mac[5]);
+//         Serial.print(macStr);
         
-        // Check if this is the Pi (based on MAC address)
-        bool isPi = true;
-        for (int j = 0; j < 6; j++) {
-            if (station.mac[j] != piMacAddress[j]) {
-                isPi = false;
-                break;
-            }
-        }
+//         // Check if this is the Pi (based on MAC address)
+//         bool isPi = true;
+//         for (int j = 0; j < 6; j++) {
+//             if (station.mac[j] != piMacAddress[j]) {
+//                 isPi = false;
+//                 break;
+//             }
+//         }
         
-        if (isPi) {
-            piFound = true;
-            Serial.println(" (Raspberry Pi detected!)");
+//         if (isPi) {
+//             piFound = true;
+//             Serial.println(" (Raspberry Pi detected!)");
             
-            // Only scan a small range since we're limiting to 1 client
-            // With a single client, the Pi should almost always get 192.168.4.2
-            IPAddress baseIP = WiFi.softAPIP();
-            IPAddress clientIP(baseIP[0], baseIP[1], baseIP[2], 2);
+//             // Only scan a small range since we're limiting to 1 client
+//             // With a single client, the Pi should almost always get 192.168.4.2
+//             IPAddress baseIP = WiFi.softAPIP();
+//             IPAddress clientIP(baseIP[0], baseIP[1], baseIP[2], 2);
             
-            Serial.printf("Testing likely Pi IP: %s\n", clientIP.toString().c_str());
+//             Serial.printf("Testing likely Pi IP: %s\n", clientIP.toString().c_str());
             
-            // Try to connect to the expected client IP
-            WiFiClient testClient;
-            if (testClient.connect(clientIP, ws_port)) {
-                Serial.printf("*** Found active device at IP: %s ***\n", clientIP.toString().c_str());
-                testClient.stop();
+//             // Try to connect to the expected client IP
+//             WiFiClient testClient;
+//             if (testClient.connect(clientIP, ws_port)) {
+//                 Serial.printf("*** Found active device at IP: %s ***\n", clientIP.toString().c_str());
+//                 testClient.stop();
                 
-                // Let's try to establish a WebSocket connection
-                Serial.printf("Attempting WebSocket connection to %s:%d%s\n", 
-                            clientIP.toString().c_str(), ws_port, ws_url);
+//                 // Let's try to establish a WebSocket connection
+//                 Serial.printf("Attempting WebSocket connection to %s:%d%s\n", 
+//                             clientIP.toString().c_str(), ws_port, ws_url);
                 
-                // Store the Pi's actual IP
-                piActualIP = clientIP;
+//                 // Store the Pi's actual IP
+//                 piActualIP = clientIP;
                 
-                // Try to connect via WebSocket
-                webSocket.disconnect();
-                delay(500);
-                webSocket.begin(clientIP.toString().c_str(), ws_port, ws_url);
-            } else {
-                // If the likely IP didn't work, try a small range
-                Serial.println("Could not connect to expected IP, trying a small range...");
-                for (int ip = 2; ip <= 5; ip++) {
-                    IPAddress testIP(baseIP[0], baseIP[1], baseIP[2], ip);
+//                 // Try to connect via WebSocket
+//                 webSocket.disconnect();
+//                 delay(500);
+//                 webSocket.begin(clientIP.toString().c_str(), ws_port, ws_url);
+//             } else {
+//                 // If the likely IP didn't work, try a small range
+//                 Serial.println("Could not connect to expected IP, trying a small range...");
+//                 for (int ip = 2; ip <= 5; ip++) {
+//                     IPAddress testIP(baseIP[0], baseIP[1], baseIP[2], ip);
                     
-                    Serial.printf("Testing IP: %s\n", testIP.toString().c_str());
+//                     Serial.printf("Testing IP: %s\n", testIP.toString().c_str());
                     
-                    if (testClient.connect(testIP, ws_port)) {
-                        Serial.printf("*** Found active device at IP: %s ***\n", testIP.toString().c_str());
-                        testClient.stop();
+//                     if (testClient.connect(testIP, ws_port)) {
+//                         Serial.printf("*** Found active device at IP: %s ***\n", testIP.toString().c_str());
+//                         testClient.stop();
                         
-                        // Store the Pi's actual IP
-                        piActualIP = testIP;
+//                         // Store the Pi's actual IP
+//                         piActualIP = testIP;
                         
-                        // Try to connect via WebSocket
-                        webSocket.disconnect();
-                        delay(500);
-                        webSocket.begin(testIP.toString().c_str(), ws_port, ws_url);
-                        break;
-                    }
-                }
-            }
-        } else {
-            Serial.println();
-        }
-    }
+//                         // Try to connect via WebSocket
+//                         webSocket.disconnect();
+//                         delay(500);
+//                         webSocket.begin(testIP.toString().c_str(), ws_port, ws_url);
+//                         break;
+//                     }
+//                 }
+//             }
+//         } else {
+//             Serial.println();
+//         }
+//     }
     
-    return piFound;
-}
+//     return piFound;
+// }
 
 void turnAllLEDsOff()
 {
