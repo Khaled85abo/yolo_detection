@@ -4,14 +4,19 @@
 #include <HTTPClient.h>
 #include <WebSocketsClient.h>
 #include <ArduinoJson.h>
+#include "esp_wifi.h"
+#include "esp_netif.h"
 
 // esp32 ip address: http://192.168.1.202/
 // Flask server IP address
 // const char *flask_server_ip = "http://192.168.1.249:5000/api/status";
 
 // Replace with your network credentials
-const char *ssid = "TN-JE3155";
+const char *ssid = "Pi-rise";
 const char *password = "";
+
+const char *ap_ssid = "ESP32-AP";
+const char *ap_password = "riserise";
 
 // LED pins
 const int PLANK_STOP_LED = 19;     // stop
@@ -30,13 +35,18 @@ bool conveyorStopLedActive = false;   // conveyor_stop
 
 WebServer server(80);
 
+// Update global variables to use newer API
+wifi_sta_list_t stationList;
+unsigned long lastStationCheckTime = 0;
+const unsigned long STATION_CHECK_INTERVAL = 5000; // Check every 5 seconds
+
 // Replace SocketIOclient with WebSocketsClient
 WebSocketsClient webSocket;
 
 // Update Flask server details
-const char *ws_server = "192.168.1.249";
+const char *ws_server = "192.168.4.100";
 bool connected = false;
-const int ws_port = 5000; // Flask's port
+const int ws_port = 8080; // Flask's port
 // Update to use standard WebSocket endpoint
 const char *ws_url = "/ws";         // New WebSocket endpoint
 unsigned long pingInterval = 25000; // WebSocket ping interval
@@ -46,6 +56,21 @@ unsigned long lastReconnectAttempt = 0;
 unsigned long lastBlinkTime = 0;
 const unsigned long BLINK_INTERVAL = 250; // Blink
 bool ledState = false;
+
+// Define the MAC address of your Raspberry Pi's WiFi interface
+// You'll need to find this value from your Pi (use 'ifconfig wlan0' or 'ip addr')
+uint8_t piMacAddress[] = {0x2C, 0xCF, 0x67, 0x4A, 0xF9, 0xDE}; // Replace with your Pi's actual MAC
+
+// The static IP you want to assign to the Pi
+IPAddress piStaticIP(192, 168, 4, 100);
+
+// Address of ESP32 AP
+IPAddress apIP(192, 168, 4, 1);
+IPAddress netMask(255, 255, 255, 0);
+
+// WebSocket client
+WiFiClient client;
+const int webSocketPort = 8080; // Port your WebSocket server runs on
 
 // HTML content as a string constant
 const char index_html[] PROGMEM = R"rawliteral(
@@ -128,15 +153,28 @@ void setup()
     Serial.begin(115200);
 
     // Connect to Wi-Fi
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED)
-    {
-        delay(1000);
-        Serial.println("Connecting to WiFi...");
-    }
-    Serial.println("Connected to WiFi");
-    Serial.print("IP Address: ");
-    Serial.println(WiFi.localIP());
+    WiFi.mode(WIFI_AP_STA);
+
+    // Start AP 
+    WiFi.softAPConfig(apIP, apIP, netMask);
+    WiFi.softAP(ap_ssid, ap_password);
+    Serial.println("AP started");
+    Serial.print("AP IP address: ");
+    Serial.println(WiFi.softAPIP());
+
+    WiFi.onEvent(WiFiEvent);
+
+
+    // Connect to Wi-Fi
+    // WiFi.begin(ssid, password);
+    // while (WiFi.status() != WL_CONNECTED)
+    // {
+    //     delay(1000);
+    //     Serial.println("Connecting to WiFi...");
+    // }
+    // Serial.println("Connected to WiFi");
+    // Serial.print("IP Address: ");
+    // Serial.println(WiFi.localIP());
 
     // Initialize WebSocket connection
     webSocket.begin(ws_server, ws_port, ws_url);
@@ -161,6 +199,19 @@ void setup()
     // Route for API endpoints
     server.on("/api/status", HTTP_GET, getStatus);
 
+    // Note: The DHCP static lease configuration has been removed as it's not
+    // directly supported in the same way with the newer ESP-IDF.
+    // Instead, we'll log the Pi's MAC address when it connects
+    
+    Serial.print("We'll be looking for Pi's MAC: ");
+    for (int i = 0; i < 6; i++) {
+        Serial.printf("%02X", piMacAddress[i]);
+        if (i < 5) Serial.print(":");
+    }
+    Serial.println();
+    Serial.print("Expected Pi IP: ");
+    Serial.println(piStaticIP.toString());
+
     server.begin();
 }
 
@@ -178,6 +229,12 @@ void loop()
         // Send ping to keep connection alive
         sendPing();
         Serial.println("Sending ping");
+    }
+
+    // Check for connected stations periodically
+    if (currentMillis - lastStationCheckTime >= STATION_CHECK_INTERVAL) {
+        lastStationCheckTime = currentMillis;
+        printConnectedStations();
     }
 
     // Handle LED blinking
@@ -207,6 +264,104 @@ void loop()
     if (!connected)
     {
         turnAllLEDsOn();
+    }
+
+    // Check for connected clients - simplified version
+    if(WiFi.softAPgetStationNum() > 0) {
+        // Get connected station count
+        Serial.print("Number of connected stations: ");
+        Serial.println(WiFi.softAPgetStationNum());
+        
+        // We can't easily get the detailed station info with the newer API
+        // in the Arduino framework, so we'll just check for our WebSocket connection
+    }
+    
+    // Check if we can connect to the Pi's WebSocket server
+    if (!client.connected()) {
+        Serial.println("Attempting to connect to Pi's WebSocket server...");
+        if (client.connect(piStaticIP, webSocketPort)) {
+            Serial.println("Connected to WebSocket server!");
+            // Here you would implement your WebSocket protocol
+        } else {
+            Serial.println("Connection to WebSocket server failed");
+            delay(5000); // Wait 5 seconds before retrying
+        }
+    }
+    
+    // Handle WebSocket communication when connected
+    if (client.connected()) {
+        // Your WebSocket communication code here
+    }
+    
+    delay(5000); // Check every 5 seconds
+}
+
+void WiFiEvent(WiFiEvent_t event) {
+    switch(event) {
+        case ARDUINO_EVENT_WIFI_AP_STACONNECTED:
+            Serial.println("New station connected to ESP32 AP!");
+            printConnectedStations();
+            break;
+        case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED:
+            Serial.println("Station disconnected from ESP32 AP!");
+            printConnectedStations();
+            break;
+        default:
+            break;
+    }
+}
+
+// Updated function to print all connected stations
+void printConnectedStations() {
+    int stationCount = WiFi.softAPgetStationNum();
+    if (stationCount == 0) {
+        Serial.println("No stations connected");
+        return;
+    }
+    
+    Serial.print("Number of connected stations: ");
+    Serial.println(stationCount);
+    
+    // Get the station list using the newer API
+    esp_err_t result = esp_wifi_ap_get_sta_list(&stationList);
+    
+    if (result != ESP_OK) {
+        Serial.println("Failed to get station list");
+        return;
+    }
+    
+    for (int i = 0; i < stationList.num; i++) {
+        wifi_sta_info_t station = stationList.sta[i];
+        
+        Serial.print("Station ");
+        Serial.print(i + 1);
+        Serial.print(" - MAC: ");
+        for (int j = 0; j < 6; j++) {
+            Serial.printf("%02X", station.mac[j]);
+            if (j < 5) Serial.print(":");
+        }
+        
+        // Get IP address using the MAC
+        Serial.print(" - IP: ");
+        
+        // We may need to get IP from DHCP leases as the newer API 
+        // doesn't directly provide IP addresses
+        Serial.println(" (IP not available in newer ESP32 API)");
+        
+        // Check if this is the Pi (based on MAC address)
+        bool isPi = true;
+        for (int j = 0; j < 6; j++) {
+            if (station.mac[j] != piMacAddress[j]) {
+                isPi = false;
+                break;
+            }
+        }
+        
+        if (isPi) {
+            Serial.print(" (Raspberry Pi - Assigned IP should be: ");
+            Serial.print(piStaticIP.toString());
+            Serial.println(")");
+        }
     }
 }
 
