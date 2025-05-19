@@ -7,9 +7,6 @@
 #include "esp_wifi.h"
 #include "esp_netif.h"
 
-// esp32 ip address: http://192.168.1.202/
-// Flask server IP address
-// const char *flask_server_ip = "http://192.168.1.249:5000/api/status";
 
 // Replace with your network credentials
 const char *ssid = "Pi-rise";
@@ -156,17 +153,17 @@ void setup()
     Serial.begin(115200);
 
     // Connect to Wi-Fi
-    // WiFi.mode(WIFI_AP_STA);
+    WiFi.mode(WIFI_AP_STA);
 
-    // // Start AP with limited configuration
-    // WiFi.softAPConfig(apIP, apIP, netMask);
-    // // Set maxConnection to 1 to only allow the Pi
-    // WiFi.softAP(ap_ssid, ap_password, 1, 0, 1); // channel 1, hidden=false, max_connection=1
-    // Serial.println("AP started with max 1 connection");
-    // Serial.print("AP IP address: ");
-    // Serial.println(WiFi.softAPIP());
+    // Start AP with limited configuration
+    WiFi.softAPConfig(apIP, apIP, netMask);
+    // Set maxConnection to 1 to only allow the Pi
+    WiFi.softAP(ap_ssid, ap_password, 1, 0, 1); // channel 1, hidden=false, max_connection=1
+    Serial.println("AP started with max 1 connection");
+    Serial.print("AP IP address: ");
+    Serial.println(WiFi.softAPIP());
 
-    // WiFi.onEvent(WiFiEvent);
+    WiFi.onEvent(WiFiEvent);
 
 
     // Connect to Wi-Fi
@@ -256,19 +253,19 @@ void loop()
     }
 
     // Check for connected stations periodically
-    // if (currentMillis - lastStationCheckTime >= STATION_CHECK_INTERVAL) {
-    //     lastStationCheckTime = currentMillis;
-    //     piDetected = printConnectedStations();
+    if (currentMillis - lastStationCheckTime >= STATION_CHECK_INTERVAL) {
+        lastStationCheckTime = currentMillis;
+        piDetected = printConnectedStations();
         
-    //     // If we detected the Pi but aren't connected, try its last known IP
-    //     if (piDetected && !connected && piActualIP != IPAddress(0,0,0,0)) {
-    //         Serial.printf("Attempting to reconnect to last known Pi IP: %s\n", 
-    //                      piActualIP.toString().c_str());
-    //         webSocket.disconnect();
-    //         delay(500);
-    //         webSocket.begin(piActualIP.toString().c_str(), ws_port, ws_url);
-    //     }
-    // }
+        // If we detected the Pi but aren't connected, try its last known IP
+        if (piDetected && !connected && piActualIP != IPAddress(0,0,0,0)) {
+            Serial.printf("Attempting to reconnect to last known Pi IP: %s\n", 
+                         piActualIP.toString().c_str());
+            webSocket.disconnect();
+            delay(500);
+            webSocket.begin(piActualIP.toString().c_str(), ws_port, ws_url);
+        }
+    }
 
     // Handle LED blinking
     if (currentMillis - lastBlinkTime >= BLINK_INTERVAL && connected)
