@@ -43,12 +43,12 @@ const unsigned long STATION_CHECK_INTERVAL = 5000; // Check every 5 seconds
 // Replace SocketIOclient with WebSocketsClient
 WebSocketsClient webSocket;
 
-// Update Flask server details
-const char *ws_server = "http://10.42.0.1";
+// Update Flask server details - try just IP address
+const char *ws_server = "10.42.0.1";
 bool connected = false;
-const int ws_port = 5000; // Flask's port 5000
-// Update to use standard WebSocket endpoint
-const char *ws_url = "/ws";         // New WebSocket endpoint
+const int ws_port = 5000;
+// Update WebSocket path - try with and without leading slash
+const char *ws_url = "/ws";  // could also try "ws"
 unsigned long pingInterval = 25000; // WebSocket ping interval
 unsigned long lastPing = 0;
 bool reconnecting = false;
@@ -180,14 +180,28 @@ void setup()
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
 
-    // Initialize WebSocket connection
-    webSocket.begin(ws_server, ws_port, ws_url);
-    webSocket.onEvent(webSocketEvent);
-    // Increase timeout/reconnect interval to reduce disconnections
+    // Initialize WebSocket connection with more debug output
+    Serial.println("Attempting to connect to WebSocket server:");
+    Serial.print("Server: ");
+    Serial.println(ws_server);
+    Serial.print("Port: ");
+    Serial.println(ws_port);
+    Serial.print("URL: ");
+    Serial.println(ws_url);
+    
+    // Set more verbose debug level
     webSocket.setReconnectInterval(5000);
-    // Enable auto-reconnect
     webSocket.enableHeartbeat(15000, 3000, 2);
-
+    
+    // CRITICAL: Register the event handler (this may be missing)
+    webSocket.onEvent(webSocketEvent);
+    
+    // Try standard begin with explicit path
+    webSocket.begin(ws_server, ws_port, ws_url);
+    
+    // OR try Socket.IO mode if the above doesn't work
+    // webSocket.beginSocketIO(ws_server, ws_port);
+    
     // Set LED pins as outputs
     pinMode(PLANK_STOP_LED, OUTPUT);
     pinMode(PLANK_OVERLAP_LED, OUTPUT);
@@ -217,6 +231,12 @@ void setup()
     // Serial.println(piStaticIP.toString());
 
     server.begin();
+
+    HTTPClient http;
+    http.begin("http://10.42.0.1:5000");
+    int httpCode = http.GET();
+    Serial.printf("HTTP test response: %d\n", httpCode);
+    http.end();
 }
 
 void loop()
@@ -467,7 +487,7 @@ void getStatus()
     server.send(200, "application/json", payload);
 }
 
-// Update WebSocket event handler
+// Modify the webSocketEvent function to provide more debugging info
 void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
 {
     // Document declaration outside the switch
@@ -477,6 +497,7 @@ void webSocketEvent(WStype_t type, uint8_t *payload, size_t length)
     {
     case WStype_DISCONNECTED:
         Serial.println("WebSocket Disconnected!");
+        Serial.printf("Attempting reconnect to %s:%d%s\n", ws_server, ws_port, ws_url);
         connected = false;
         stopConveyor();
         break;
