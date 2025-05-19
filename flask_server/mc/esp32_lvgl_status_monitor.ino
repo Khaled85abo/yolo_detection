@@ -41,9 +41,8 @@ static lv_color_t buf1[120 * 10]; // Reduced from 240*10
 
 // LVGL UI elements - Global variables
 lv_obj_t *tabview;
-lv_obj_t *statusTab;
+lv_obj_t *statusTab; // This will now be status+camera combined
 lv_obj_t *rulesTab;
-lv_obj_t *cameraTab;
 
 // Status tab elements
 lv_obj_t *connectionLabel;
@@ -193,59 +192,52 @@ void loop()
 
 void createUI()
 {
-    // Create tabview with three tabs
+    // Create tabview with only two tabs
     tabview = lv_tabview_create(lv_scr_act());
-    statusTab = lv_tabview_add_tab(tabview, "Status");
+    statusTab = lv_tabview_add_tab(tabview, "Status"); // Combined tab
     rulesTab = lv_tabview_add_tab(tabview, "Rules");
-    cameraTab = lv_tabview_add_tab(tabview, "Camera");
 
-    // Create content for Status Tab
-    createStatusTab();
+    // Create content for Status+Camera Tab
+    createCombinedStatusTab();
     
     // Create content for Rules Tab
     createRulesTab();
-    
-    // Create content for Camera Tab (placeholder)
-    createCameraTab();
 }
 
-void createStatusTab()
+void createCombinedStatusTab()
 {
-    // Create title
-    lv_obj_t *titleLabel = lv_label_create(statusTab);
-    lv_label_set_text(titleLabel, "Plank Monitor Status");
-    lv_obj_align(titleLabel, LV_ALIGN_TOP_MID, 0, 5);
-    lv_obj_set_style_text_font(titleLabel, &lv_font_montserrat_14, 0);
-
+    // Create a placeholder frame for camera at the top
+    lv_obj_t *cameraFrame = lv_obj_create(statusTab);
+    lv_obj_set_size(cameraFrame, 200, 90); // Reduced size to fit more elements
+    lv_obj_align(cameraFrame, LV_ALIGN_TOP_MID, 0, 5);
+    lv_obj_set_style_border_width(cameraFrame, 2, 0);
+    lv_obj_set_style_border_color(cameraFrame, lv_color_hex(0x3498DB), 0); // Blue
+    lv_obj_set_style_bg_opa(cameraFrame, LV_OPA_0, 0); // Transparent background
+    
+    // Add camera message
+    lv_obj_t *cameraMsg = lv_label_create(cameraFrame);
+    lv_label_set_text(cameraMsg, "Camera feed placeholder");
+    lv_obj_center(cameraMsg);
+    
     // Create connection status label
     connectionLabel = lv_label_create(statusTab);
     lv_label_set_text(connectionLabel, "Connecting...");
-    lv_obj_align_to(connectionLabel, titleLabel, LV_ALIGN_OUT_BOTTOM_MID, 0, 5);
+    lv_obj_align_to(connectionLabel, cameraFrame, LV_ALIGN_OUT_BOTTOM_MID, 0, 5);
 
     // Create conveyor status panel
     conveyorPanel = lv_obj_create(statusTab);
-    lv_obj_set_size(conveyorPanel, 280, 35);
-    lv_obj_align_to(conveyorPanel, connectionLabel, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);
+    lv_obj_set_size(conveyorPanel, 280, 30); // Reduced height
+    lv_obj_align_to(conveyorPanel, connectionLabel, LV_ALIGN_OUT_BOTTOM_MID, 0, 5); // Reduced gap
     lv_obj_set_style_bg_color(conveyorPanel, lv_color_hex(0x00FF00), 0); // Green
 
     conveyorLabel = lv_label_create(conveyorPanel);
     lv_label_set_text(conveyorLabel, "Conveyor: RUNNING");
     lv_obj_center(conveyorLabel);
 
-    // Control buttons
-    stopBtn = lv_btn_create(statusTab);
-    lv_obj_set_size(stopBtn, 130, 35);
-    lv_obj_align_to(stopBtn, conveyorPanel, LV_ALIGN_OUT_BOTTOM_LEFT, 10, 10);
-    lv_obj_set_style_bg_color(stopBtn, lv_color_hex(0xFF4444), 0); // Red
-    lv_obj_add_event_cb(stopBtn, stopBtnHandler, LV_EVENT_CLICKED, NULL);
-    
-    lv_obj_t *stopLabel = lv_label_create(stopBtn);
-    lv_label_set_text(stopLabel, "Stop Conveyor");
-    lv_obj_center(stopLabel);
-
+    // Control buttons - reduced size and placed side by side
     startBtn = lv_btn_create(statusTab);
-    lv_obj_set_size(startBtn, 130, 35);
-    lv_obj_align_to(startBtn, conveyorPanel, LV_ALIGN_OUT_BOTTOM_RIGHT, -10, 10);
+    lv_obj_set_size(startBtn, 130, 30); // Reduced height
+    lv_obj_align_to(startBtn, conveyorPanel, LV_ALIGN_OUT_BOTTOM_LEFT, 10, 5); // Reduced gap
     lv_obj_set_style_bg_color(startBtn, lv_color_hex(0x44FF44), 0); // Green
     lv_obj_add_event_cb(startBtn, startBtnHandler, LV_EVENT_CLICKED, NULL);
     
@@ -253,10 +245,20 @@ void createStatusTab()
     lv_label_set_text(startLabel, "Start Conveyor");
     lv_obj_center(startLabel);
 
-    // Warning panels
-    int panel_height = 32;
-    int panel_spacing = 5;
-    int start_y = 155;
+    stopBtn = lv_btn_create(statusTab);
+    lv_obj_set_size(stopBtn, 130, 30); // Reduced height
+    lv_obj_align_to(stopBtn, conveyorPanel, LV_ALIGN_OUT_BOTTOM_RIGHT, -10, 5); // Reduced gap
+    lv_obj_set_style_bg_color(stopBtn, lv_color_hex(0xFF4444), 0); // Red
+    lv_obj_add_event_cb(stopBtn, stopBtnHandler, LV_EVENT_CLICKED, NULL);
+    
+    lv_obj_t *stopLabel = lv_label_create(stopBtn);
+    lv_label_set_text(stopLabel, "Stop Conveyor");
+    lv_obj_center(stopLabel);
+
+    // Warning panels - reduced size and spacing
+    int panel_height = 26; // Reduced height
+    int panel_spacing = 3; // Reduced spacing
+    int start_y = 185; // Adjusted starting position
 
     // Stopped plank panel
     stoppedPanel = lv_obj_create(statusTab);
@@ -350,23 +352,6 @@ void createRulesTab()
     lv_obj_t *saveLabel = lv_label_create(saveRulesBtn);
     lv_label_set_text(saveLabel, "Save Rules");
     lv_obj_center(saveLabel);
-}
-
-void createCameraTab()
-{
-    // Simple placeholder message for camera tab
-    lv_obj_t *cameraMsg = lv_label_create(cameraTab);
-    lv_label_set_text(cameraMsg, "Camera streaming not supported\non this device due to\nbandwidth limitations.");
-    lv_obj_center(cameraMsg);
-    
-    // Create a placeholder frame/border to represent where the camera
-    // feed would be displayed
-    lv_obj_t *cameraFrame = lv_obj_create(cameraTab);
-    lv_obj_set_size(cameraFrame, 240, 180);
-    lv_obj_align(cameraFrame, LV_ALIGN_TOP_MID, 0, 20);
-    lv_obj_set_style_border_width(cameraFrame, 2, 0);
-    lv_obj_set_style_border_color(cameraFrame, lv_color_hex(0x3498DB), 0); // Blue
-    lv_obj_set_style_bg_opa(cameraFrame, LV_OPA_0, 0); // Transparent background
 }
 
 static void startBtnHandler(lv_event_t *e)
